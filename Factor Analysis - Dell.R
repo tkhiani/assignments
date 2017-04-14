@@ -2,6 +2,7 @@ library(readxl)
 library(psych)
 
 " 
+Good Read on factor analysis: http://www.statmethods.net/advstats/factor.html
 Questionnaires are designed to measure Customer Satisfaction and some of them have related questions on purpose to ensure correct answers
 The idea is to identify or group ralated dimensions or questions
 
