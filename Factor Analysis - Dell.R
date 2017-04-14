@@ -34,10 +34,12 @@ dellPCs <- prcomp(dellData, scale=T)
 # Determine the number of PCs that are sufficient in this case 4
 summary(dellPCs)
 plot(dellPCs, type="l", main="Scree Plot of Dell Data", col="blue")
+biplot(dellPCs)
 
 # Factor Analysis #
 dellFactorsNoRotation <- principal(dellData, nfactors=4, rotate="none")
 dellFactorsNoRotation
+biplot(dellFactorsNoRotation)
 
 "
 Combine Q01 to Q04
@@ -70,3 +72,5 @@ Factor 4: Wet blanket (negative towards innovation)
 "
 dellFactorsVarimaxRotation <- principal(dellData, nfactors=4, rotate="varimax")
 dellFactorsVarimaxRotation
+biplot(dellFactorsVarimaxRotation)
+
