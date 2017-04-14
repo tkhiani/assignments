@@ -3,6 +3,7 @@ library(psych)
 
 " 
 Good Read on factor analysis: http://www.statmethods.net/advstats/factor.html
+Practical Use Cases: http://info.paiwhq.com/practical-uses-of-factor-analysis/
 Questionnaires are designed to measure Customer Satisfaction and some of them have related questions on purpose to ensure correct answers
 The idea is to identify or group ralated dimensions or questions
 
@@ -27,7 +28,15 @@ dellData <- read_excel("./data/Dell Data.xlsx")
 View(dellData)
 
 round(var(dellData),2)
-round(cor(dellData),2)
+r <- round(cor(dellData),2)
+
+"
+Bartlett test, Ho: Variables are not correlated, Ha: Variables are correlated
+We can also use the KMO index, closer to 1 then correlated
+Justify for a dimension reduction technique
+"
+cortest.bartlett(r) 
+KMO(r)
 
 # Principal Component Analysis, Scaling recommended
 dellPCs <- prcomp(dellData, scale=T)  
@@ -74,4 +83,3 @@ Factor 4: Wet blanket (negative towards innovation)
 dellFactorsVarimaxRotation <- principal(dellData, nfactors=4, rotate="varimax")
 dellFactorsVarimaxRotation
 biplot(dellFactorsVarimaxRotation)
-
