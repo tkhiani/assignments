@@ -17,6 +17,7 @@ controlCriteria = rpart.control(minsplit=45, minbucket = 15, cp = 0, xval = 10)
 classificationModel <- rpart(formula = target ~ ., data = train, method = "class", control = controlCriteria)
 classificationModel
 library("rpart.plot")
+library("rattle")
 fancyRpartPlot(classificationModel)
 
 # use the CP value where the xerror is the least
