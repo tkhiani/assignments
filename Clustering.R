@@ -1,7 +1,7 @@
-## Let us find the clusters in given Retail Customer Spends data
-## Hierarchical Clustering
+# Let us find the clusters in given Retail Customer Spends data
+# Hierarchical Clustering
 
-## Let us first set the working directory path and import the data
+# Let us first set the working directory path and import the data
 
 customerSpend <- read.csv("./data/Cust_Spend_Data.csv", header=TRUE)
 View(customerSpend)
@@ -10,30 +10,28 @@ View(customerSpend)
 d.euc <- dist(x=customerSpend[,3:7], method = "euclidean") 
 d.euc
 
-## we will use the hclust function to build the cluster
+# we will use the hclust function to build the cluster
 ?hclust  ## to get help on hclust function
 
-clus1 <- hclust(d.euc, method = "average")
+hCluster <- hclust(d.euc, method = "average")
 
-plot(clus1, labels = as.character(customerSpend[,2]))
+plot(hCluster, labels = as.character(customerSpend[,2]))
 
-## scale function standardizes the values
+# scale function standardizes the values
 scaled.RCDF <- scale(customerSpend[,3:7])
 head(scaled.RCDF, 10)
-d.euc
 d.euc <- dist(x=scaled.RCDF, method = "euclidean") 
-d.euc
-clus2 <- hclust(d.euc, method = "average")
-plot(clus2, labels = as.character(customerSpend[,2]))
-rect.hclust(clus2, k=4, border="red")
+hCluster <- hclust(d.euc, method = "average")
+plot(hCluster, labels = as.character(customerSpend[,2]))
+rect.hclust(hCluster, k=3, border="red")
 clus2$height
 
 View(customerSpend)
 ## profiling the clusters
-customerSpend$Clusters <- cutree(clus2, k=4)
+customerSpend$Clusters <- cutree(hCluster, k=4)
 View(customerSpend)
 
-
+library("dplyr")
 customer.profile <- group_by(customerSpend[,-c(1,2)], Clusters)
 customer.profile <- summarise(customer.profile, count=n(), mean(Avg_Mthly_Spend), mean(No_Of_Visits), mean(Apparel_Items), mean(FnV_Items), mean(Staples_Items))
 customer.profiles <- data.frame(customer.profile)
@@ -42,18 +40,14 @@ View(customer.profile)
   
 ## K Means Clustering
 
-KRCDF <- read.csv("./data/Cust_Spend_Data.csv", header=TRUE)
+customerSpend <- read.csv("./data/Cust_Spend_Data.csv", header=TRUE)
 ## scale function standardizes the values
-scaled.RCDF <- scale(KRCDF[,3:7])
+scaled.RCDF <- scale(customerSpend[,3:7])
 
-##KRCDF <- read.csv("datafiles/KBD.csv", header=TRUE)
-##scaled.RCDF <- scale(KRCDF[,2:3])
-View(scaled.RCDF)
-class(scaled.RCDF)
-## code taken from the R-statistics blog
-## http://www.r-statistics.com/2013/08/k-means-clustering-from-r-in-action/
+# code taken from the R-statistics blog
+# http://www.r-statistics.com/2013/08/k-means-clustering-from-r-in-action/
 
-## Identifying the optimal number of clusters form WSS
+# Identifying the optimal number of clusters form WSS
 
 wssplot <- function(data, nc=15, seed=1234){
   wss <- (nrow(data)-1)*sum(apply(data,2,var))
@@ -63,16 +57,16 @@ wssplot <- function(data, nc=15, seed=1234){
   plot(1:nc, wss, type="b", xlab="Number of Clusters",
        ylab="Within groups sum of squares")}
 
-wssplot(scaled.RCDF, nc=5)
+wssplot(scaled.RCDF, nc=6)
 
 ## Identifying the optimal number of clusters
 ## install.packages("NbClust")
 
 library(NbClust)
-?NbClust
 
 set.seed(1234)
-nc <- NbClust(KRCDF[,c(-1,-2)], min.nc=2, max.nc=4, method="kmeans")
+?NbClust()
+nc <- NbClust(scaled.RCDF[,c(-1,-2)], min.nc=2, max.nc=4, method="kmeans")
 table(nc$Best.n[1,])
 
 barplot(table(nc$Best.n[1,]),
@@ -85,7 +79,7 @@ kmeans.clus
 
 tmp <- as.data.frame(scaled.RCDF)
 tmp$Clusters <- kmeans.clus$cluster
-View(tmp)
+head(tmp)
 ## plotting the clusters
 ##install.packages("fpc")
 library(fpc)
@@ -98,7 +92,8 @@ clusplot(scaled.RCDF, kmeans.clus$cluster,
 
 ## profiling the clusters
 library("dplyr")
-groupByClusters <- group_by(KRCDF[,-c(1,2)], Clusters)
+groupByClusters <- group_by(tmp, Clusters)
+head(tmp)
 summByClusters <- summarise(groupByClusters, count=n(), mean(Avg_Mthly_Spend), mean(No_Of_Visits), mean(Apparel_Items), mean(FnV_Items), mean(Staples_Items))
 summByClusters <- data.frame(summByClusters)
 summByClusters

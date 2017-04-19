@@ -30,11 +30,11 @@ View(dellData)
 round(var(dellData),2)
 r <- round(cor(dellData),2)
 
-"
-Bartlett test, Ho: Variables are not correlated, Ha: Variables are correlated
-We can also use the KMO index, closer to 1 then correlated
-Justify for a dimension reduction technique
-"
+
+# Bartlett test, Ho: Variables are not correlated, Ha: Variables are correlated
+# We can also use the KMO index, closer to 1 then correlated
+# Justify for a dimension reduction technique
+
 cortest.bartlett(r) 
 KMO(r)
 
@@ -43,7 +43,7 @@ dellPCs <- prcomp(dellData, scale=T)
 
 # Determine the number of PCs that are sufficient in this case 4
 summary(dellPCs)
-plot(dellPCs, type="l", main="Scree Plot of Dell Data", col="blue")
+plot(dellPCs, type="l", main="Scree Plot", col="blue")
 biplot(dellPCs)
 
 # Factor Analysis #
