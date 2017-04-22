@@ -1,18 +1,19 @@
-library("plyr")
+library("dplyr")
+library("car")
 
 #load the file on assets for all the candidates 
 votesByConstituency <- read.csv("./data/VotesByConstituency.csv")
+head(votesByConstituency)
 
 #Summarize by Constituency and merge with votesByConstituency to dermine the % of votes for each candidate  
-totalVotesByConstituency <- ddply(votesByConstituency, c("Constituency"), summarize, sum(Votes))
+totalVotesByConstituency <- ddply(votesByConstituency, c("Constituency"), summarize, total = sum(Votes))
 votesByConstituencyWithTotals <- merge(votesByConstituency, totalVotesByConstituency, by = "Constituency")
-votesByConstituencyWithTotals <- rename(votesByConstituencyWithTotals, c("..1" = "total"))
 votesByConstituencyWithTotals$percentageVotes <- (votesByConstituencyWithTotals$Votes/votesByConstituencyWithTotals$total) * 100
 head(votesByConstituencyWithTotals)
 
 #Let us focus only in the state of Goa  
 votesByConstituencyInGoa <- filter(votesByConstituencyWithTotals, grepl("Goa", votesByConstituencyWithTotals$Constituency))
-
+View(votesByConstituencyInGoa)
 # Not normally distributed
 shapiro.test(votesByConstituencyInGoa$percentageVotes)
 
