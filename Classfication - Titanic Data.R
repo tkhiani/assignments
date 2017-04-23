@@ -17,9 +17,9 @@ head(train)
 head(test)
 
 # Summary statistics of the data
+library(psych)
 summary(train)
-skewness(train)
-kurtosis(train)
+describe(train)
 
 # Scale data for classification
 temp <- train[,c(1,2,3,8)]
