@@ -15,6 +15,8 @@ var(car_data)
 sCarData <- data.frame(scale(car_data))
 var(sCarData)
 
+car_lm <- lm(mpg~., car_data)
+
 #conducting PCA 
 car_pca = prcomp(sCarData[,-1])
 
