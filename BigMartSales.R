@@ -1,3 +1,9 @@
+library("dplyr")
+library("psych")
+library("ridge")
+library("lubridate")
+library("dummies")
+
 # load data
 train <- read.csv("./data/BigMartSales/train.csv")
 train$type <- 0
@@ -19,11 +25,9 @@ summary(salesData)
 
 # Determine the number of distinct values
 # Determine the no. of NA's per variable?
-library("dplyr")
 summarise_all(salesData, funs(n_distinct(.)))
 
 # Variables Item Weight, Item Visibility, Item Outlet Sales, Outlet Type - High positive skew
-library("psych")
 describe(salesData)
 
 # Data Cleaning
@@ -43,7 +47,6 @@ salesData <- mutate(salesData, Item_Visibility = if_else(Item_Visibility == 0,
 salesData <- mutate(salesData, Item_Fat_Content = if_else( Item_Fat_Content %in% c("LF", "low fat", "Low Fat"), "Low Fat","Regular"))
 
 # Years of operations instead of Establishment Year
-library("lubridate")
 salesData$yearsInOperations <-  year(Sys.Date()) - salesData$Outlet_Establishment_Year
 
 # Consider combining Outlet_Types
@@ -56,6 +59,20 @@ salesByOutletType %>% summarise(mean(Item_Outlet_Sales, na.rm = TRUE))
 salesData <- mutate(salesData, category = ifelse(grepl("FD",Item_Identifier), "Food",
                                                  ifelse(grepl("DR",Item_Identifier), "Drinks",
                                                         "Non Comsumables")))
+head(salesData)
+nRows <- nrow(salesData)
+sales <- sum(salesData$Item_Outlet_Sales, na.rm = TRUE)
+sales
+salesByItemType <- group_by(salesData, Item_Type)
+salesByItemType %>% summarise(
+                                mean(Item_Outlet_Sales, na.rm = TRUE),
+                                con = 100 * sum(Item_Outlet_Sales, na.rm = TRUE)/sales, 
+                                n(),
+                                100*n()/nRows
+                            ) %>%
+                    arrange(con)
+
+
 summary(salesData)
 salesData$category <- as.factor(salesData$category)
 salesData$Outlet_Size <- as.factor(salesData$Outlet_Size)
@@ -64,7 +81,6 @@ head(salesData)
 summary(salesData)
 
 # get dummies for regression
-library(dummies)
 head(salesData)
 item_identifier <- salesData[,1]
 salesData <- dummy.data.frame(salesData[,-c(1,7,5,8)], sep = ".")
@@ -80,11 +96,9 @@ head(salesData)
 train <- filter(salesData[,-c(22)], salesData$type == 0)
 test <- filter(salesData[,-c(22)], salesData$type == 1)
 
-library("ridge")
 model <- linearRidge(train$Item_Outlet_Sales~., train)
-pValues <- predict(model, test)
-head(pValues)
-
+pValues <- predict(model,train)
+sqrt( sum( ((pValues - train$Item_Outlet_Sales)^2) ) / length(pValues2) )
 # club the classified result with the production data
 results <- data.frame(Item_Identifier = testItemIdentifier, Outlet_Identifier = testOutletIdentifier, Item_Outlet_Sales = pValues)
 View(results)
