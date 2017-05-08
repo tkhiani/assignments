@@ -10,23 +10,25 @@ library(reshape2) # needed to create a matrix to feed into comparision cloud
 library(tidyr)
 
 # Set up connection with twitter
-reqURL <- "https://api.twitter.com/oauth/request_token"
-accessURL <- "http://api.twitter.com/oauth/access_token"
-authURL <- "http://api.twitter.com/oauth/authorize"
-api_key <- "nxfx9x6daXOwBxHdzqOd6sHu3"
-api_secret <- "xMEUQTX0R5ubBByEm3Uy7AhZVu5CQB6o8KA3P6uHTZUU1zf7EZ"
-access_token <- "135514978-wLEdLDPw4VslSCGx0KbwNuEZWY9a1tHuVibnf6OJ"
-access_token_secret <- "CoLphpfwhaD384qfDqEGq0Px6lYvO1wZhfqwD1C8iCu8s"
-setup_twitter_oauth(api_key,api_secret,access_token,access_token_secret)
+# reqURL <- "https://api.twitter.com/oauth/request_token"
+# accessURL <- "http://api.twitter.com/oauth/access_token"
+# authURL <- "http://api.twitter.com/oauth/authorize"
+# api_key <- "nxfx9x6daXOwBxHdzqOd6sHu3"
+# api_secret <- "xMEUQTX0R5ubBByEm3Uy7AhZVu5CQB6o8KA3P6uHTZUU1zf7EZ"
+# access_token <- "135514978-wLEdLDPw4VslSCGx0KbwNuEZWY9a1tHuVibnf6OJ"
+# access_token_secret <- "CoLphpfwhaD384qfDqEGq0Px6lYvO1wZhfqwD1C8iCu8s"
+# setup_twitter_oauth(api_key,api_secret,access_token,access_token_secret)
 
 # Read the twitter handle
-feeLootTweets = searchTwitter('#SchoolFeeLoot', n=2500)
+# feeLootTweets = searchTwitter('#SchoolFeeLoot', n=2500)
 
 # Convert to a data frame so that we can manipuate it
-feeLootTweets = sapply(feeLootTweets, function(t) t$getText() )
-feeLootTweets <- data_frame(text = feeLootTweets)
+# feeLootTweets = sapply(feeLootTweets, function(t) t$getText() )
+# feeLootTweets <- data_frame(text = feeLootTweets)
+# write.csv(feeLootTweets, file = "./data/feeLootTweets.csv")
 
-write.csv(feeLootTweets, file = "./assignment details/feeLootTweets.csv")
+feeLootTweets <- read.csv("./data/feeLootTweets.csv")
+feeLootTweets$text <- as.character(feeLootTweets$text)
 
 # create tokens for each word and remove stop words
 wordsInTweet <- unnest_tokens(feeLootTweets, word, text)
@@ -35,8 +37,8 @@ wordsInTweet <- anti_join(wordsInTweet, stop_words)
 # determine the sentiment for the words and plot the charts
 # We can use bing(binary), AFINN(sentiment score), nrc(finer categories)
 wordsWithSentiments <- wordsInTweet %>%
-  inner_join(get_sentiments("bing"), by = c("word" = "word")) %>%
-  count(word, sentiment, sort = TRUE)
+  inner_join(get_sentiments("bing")) %>%
+  dplyr::count(word, sentiment, sort = TRUE)
 
 # Create a word cloud and segregate into +ve and -ve tweets
 wordsWithSentiments <- data.frame(wordsWithSentiments)
