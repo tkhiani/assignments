@@ -42,7 +42,7 @@ wordsWithSentiments <- wordsInTweet %>%
 
 # Create a word cloud and segregate into +ve and -ve tweets
 wordsWithSentiments <- data.frame(wordsWithSentiments)
-wordsWithSentiments <- top_n(wordsWithSentiments, 20, n)
+wordsWithSentiments <- top_n(wordsWithSentiments, 100, n)
 
 wordsWithSentiments %>% 
   ggplot(aes(word, n, fill = sentiment)) +
@@ -62,4 +62,22 @@ wordsWithSentiments %>%
 # lets work with groups of words
 
 # we can create topics similar to clusters with the only difference that they are not unique
-wordsMatrix <- wordsWithCounts %>% cast_dtm(word, document, n)
+wordsWithSentiments$document <- "#SchoolFeeLoot"
+wordsMatrix <- cast_dtm(wordsWithSentiments, document, word, n)
+library(topicmodels)
+wordsLda <- LDA(wordsMatrix, k = 3, control = list(seed = 1234))
+
+word_topics <- tidy(wordsLda, matrix = "beta")
+
+top_terms <- word_topics %>%
+  group_by(topic) %>%
+  top_n(5, beta) %>%
+  ungroup() %>%
+  arrange(topic, -beta)
+
+top_terms %>%
+  mutate(term = reorder(term, beta)) %>%
+  ggplot(aes(term, beta, fill = factor(topic))) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~ topic, scales = "free") +
+  coord_flip()
