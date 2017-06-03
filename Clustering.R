@@ -98,3 +98,4 @@ summByClusters <- summarise(groupByClusters, count=n(), mean(Avg_Mthly_Spend), m
 summByClusters <- data.frame(summByClusters)
 summByClusters
 
+predict(kmeans.clus, )

@@ -59,9 +59,12 @@ wordsWithSentiments %>%
 
 # identifying the sentiment using the entire sentence
 
+
 # lets work with groups of words
 
+
 # we can create topics similar to clusters with the only difference that they are not unique
+# Ideally meant for when you have more than one document 
 wordsWithSentiments$document <- "#SchoolFeeLoot"
 wordsMatrix <- cast_dtm(wordsWithSentiments, document, word, n)
 library(topicmodels)
