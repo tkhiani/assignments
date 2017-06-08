@@ -1,4 +1,5 @@
 mydata <- read.csv("./discriminateAnalysis/discri-nm1.csv")
+head(mydata)
 mydata <- mydata[,-c(1,8)]
 mydata$visit <- as.factor(mydata$visit)
 
@@ -20,6 +21,7 @@ library(psych)
 describeBy(X1,group=visit)
 mymodel=linDA(X1, Y1)
 mymodel
+mymodel$functions
 mymodel$scores
 cor(mymodel$scores,X1)
 data3=data.frame(mymodel$scores)
@@ -37,5 +39,6 @@ summary.aov(Manova)
 discPower(X1, Y1) 
 
 # work with lda for cross validation
+library(MASS)
 m <- lda(Y1~X1, data = mydata, cv = TRUE)
 m

@@ -105,6 +105,7 @@ sum(RFDF.dev$Target) / nrow(RFDF.dev)
 
 library(ROCR)
 pred <- prediction(RFDF.dev$predict.score[,2], RFDF.dev$Target)
+pred
 perf <- performance(pred, "tpr", "fpr")
 plot(perf)
 KS <- max(attr(perf, 'y.values')[[1]]-attr(perf, 'x.values')[[1]])
