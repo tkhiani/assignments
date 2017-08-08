@@ -1,0 +1,25 @@
+
+loyalty <- read.csv("./glInClass/logisticsRegression/nm-logit-1.csv")
+loyaltyLM <- lm(loyalty$Loyalty~loyalty$Brand+loyalty$Product+loyalty$Shopping, loyalty)
+summary(loyaltyLM)
+loyaltyLM$fitted.values
+logit <- glm(loyalty$Loyalty~loyalty$Brand+loyalty$Product+loyalty$Shopping, loyalty, family = binomial)
+summary(logit)
+
+confint(logit)
+exp(coef(logit))
+exp(confint(logit))
+predict(logit, type="response")
+Pred=fitted(logit)
+data.frame(loyalty, Pred)
+gg1=floor(Pred+0.50)
+table(Actual=loyalty, Prediction=gg1)
+library(Deducer) 
+rocplot(logit)
+library(lmtest)
+lrtest(logit)
+library(pscl)
+pR2(logit)
+library(fmsb)
+NagelkerkeR2(logit)
+ 
