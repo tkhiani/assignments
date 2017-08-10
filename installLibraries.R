@@ -60,6 +60,6 @@ install.packages("datasets.load")
 install.packages("fBasics")
 install.packages("rattle")
 install.packages("sparklyr")
-
+install.packages("devtools")
 
 
