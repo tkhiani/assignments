@@ -13,11 +13,11 @@
 # Explations for every field: https://www2.census.gov/programs-surveys/acs/tech_docs/pums/data_dict/PUMSDataDict13.txt
 # Replicate weights: https://usa.ipums.org/usa/repwt.shtml. Weights can be usefulf to understand the range (condifence interval) of a specific value but we decided to omit it. 
 # Allocations where used to fill values: https://usa.ipums.org/usa/flags.shtml. Hence does not make sense for us to include it into our dataset
-
 library(sparklyr)
 library(dplyr)
 library(ggplot2)
 
+# establish the spark context
 sc <- spark_connect(master = "local")
 
 # read housing data files and combine all the rows
@@ -33,11 +33,8 @@ rm(housingA, housingB)
 
 # Avoid replicate weights & allocations and use the required features
 # Remove all the rows where the property value is not known
-# Remove columns - WGTP, ADJHSG, ADJINC
 housing <- housing %>% select(RT:WORKSTAT) 
 housing <- housing %>% filter(!is.na(VALP) && RT == "H") 
-
-
 
 # Property value is not availble for other than Housing Unit. 
   # Hence we can further filter the dataset
@@ -86,15 +83,91 @@ occupied <- occupied %>% mutate(
   WATP = ifelse(is.na(WATP) || WATP == 1 || WATP == 2, 0, WATP))
 
 occupied <- na.replace(occupied, 0)
+
+# Understanding the distribution of the property value
+occupied <- occupied %>% mutate(VALP = VALP/1000)
+occupied %>% select(VALP) %>% collect %>% ggplot(aes(VALP)) + geom_histogram(bins = 100)
+occupied %>% select(VALP) %>% summarise(max(VALP), min(VALP), mean(VALP))
+#occupied <- occupied %>% filter(VALP <= 1200)
+
+# Adjust all numeric fields in 1000's except where feature represents number of children/people...
+occupied <- occupied %>% mutate(
+  ELEP = ELEP/1000,
+  GASP = GASP/1000,
+  FULP = FULP/1000,
+  WATP = WATP/1000,
+  BDSP = BDSP/1000, 
+  CONP = CONP/1000, 
+  INSP = INSP/1000, 
+  MHP = MHP/1000, 
+  MRGP = MRGP/1000, 
+  RMSP = RMSP/1000, 
+  RNTP = RNTP/1000, 
+  SMP = SMP/1000, 
+  GRNTP = GRNTP/1000, 
+  FINCP = FINCP/1000, 
+  HINCP = HINCP/1000, 
+  OCPIP = OCPIP/1000, 
+  SMOCP = SMOCP/1000,
+  ADJINC = ADJINC/1000000,
+  ADJHSG = ADJHSG/1000000)
+
+
+# Apply adjusment factor for constanst currencies
+  # ADJHSG - CONP, ELEP, FULP, GASP, GRNTP, INSP, SMOCP, RNTP, SMP, WATP. 
+  # Not applied to AGS & TAXP  
+  # ADJINC - FINCP, HINCP  
+occupied <- occupied %>% mutate(
+  ELEP = ELEP*ADJHSG,
+  GASP = GASP*ADJHSG,
+  FULP = FULP*ADJHSG,
+  WATP = WATP*ADJHSG,
+  CONP = CONP*ADJHSG, 
+  INSP = INSP*ADJHSG, 
+  SMP = SMP*ADJHSG, 
+  GRNTP = GRNTP*ADJHSG, 
+  SMOCP = SMOCP*ADJHSG,
+  FINCP = FINCP*ADJINC, 
+  HINCP = HINCP*ADJINC)
+
+
+# Create dummies or treat levels in a factor accordingly
+#fColumns <- c('SATELLITE', 'SINK', 'HANDHELD', 'MODEM')
+#ACCESS, ACR, AGS, BATH, BLD, BROADBAND, BUS, COMPOTHX, DIALUP, DSL, FIBEROP, 
+#FS, HANDHELD, HFL, MODEM, MRGI, MRGT, MRGX, OTHSVCEX, REFR, RWAT, RWATPR,
+#SATELLITE, SINK, STOV, TEL, TEN, TOIL, VEH, FES, FPARC, HHL, HHT, HUGCL, HUPAC,
+#HUPAOC, HUPARC, KIT, LNGI, MULTG, MV, YBL, BPP, NR, PARTNER, PLM, PSF,
+#R18, R60, R65, RESMODE, SMX, SRNT, SSMC, SVAL, TAXP, WIF, WKEXREL, WORKSTAT,
+#PUMA, ST, TAXP
+#
+#
+#for(i in cols){
+#  occupied <- ml_create_dummy_variables(x=occupied,i)
+#}
+
+# Split into test and train or use cross-validation
+partition <- sdf_partition(occupied, train = 0.7, test = 0.3, seed = 1099)
+
+# Dependent & Indepedent Variables
+# Remove columns - WGTP, ADJHSG, ADJINC
 n <- colnames(occupied)
 f <- as.formula(paste("VALP ~", paste(n[!n %in% c("VALP", "RT", "SERIALNO", "WGTP", "ADJHSG", "ADJINC", "VACS", "TYPE", "NP")], collapse = " + ")))
-fit <- ml_linear_regression(x = occupied, f)
 
+# Run regression and determine if we remove certain independent variables
+fit <- ml_linear_regression(x = partition$train, f)
 summary(fit)
-pVALP <- sdf_predict(fit, occupied)
-pVALP %>% select(VALP, prediction) %>% mutate(error = abs(VALP - prediction)^2) %>% summarise(sum(error)) 
 
-pVALP %>% 
+# Evaluate performance with an error function
+pTest <- sdf_predict(fit, partition$test)
+
+sumOfSquaredErrors <- pTest %>% select(VALP, prediction) %>% mutate(error = abs(VALP - prediction)^2) %>% summarise(se = sum(error)) %>% collect 
+noOfObservations <- pTest %>% summarise(n = n()) %>% collect
+
+rmse <- sqrt(sumOfSquaredErrors$se/noOfObservations$n)
+rmse
+
+# Plot Actual vs Prediction
+pTest %>% 
   select(SERIALNO, VALP, prediction) %>%
   collect %>%
   ggplot() +
@@ -105,28 +178,3 @@ pVALP %>%
     y = "Red - Actual, Blue - Predicted",
     title = "Linear Regression"
   )
-
-# Convert to factors or numeric fields as required
-#for(i in 1:7){
-#  ml_create_dummy_variables(x=dat,colnames(dat)[i],reference=NULL)
-#}
-
-# Apply adjusment factor for constanst currencies
-  # ADJHSG
-    # CONP, ELEP, FULP, GASP, GRNTP, INSP, SMOCP, RNTP, SMP, WATP. 
-    # Not applied to AGS & TAXP  
-  
-  # ADJINC
-    # FINCP, HINCP  
-
-
-# Create dummies or treat levels in a factor accordingly
-
-# Split into test and train or use cross-validation
-
-# Dependent & Indepedent Variables
-
-# Run regression and determine if we remove certain independent variables
-
-# Evaluate performance with an error function
-
