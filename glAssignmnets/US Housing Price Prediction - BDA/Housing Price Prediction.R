@@ -42,7 +42,6 @@ housing <- housing %>% filter(!is.na(VALP) && RT == "H")
 housing %>% group_by(TYPE) %>% summarise(mean(VALP), n())
 housing <- housing %>% filter(TYPE == 1)
 occupied <- housing %>% filter(is.na(VACS)) %>% sdf_register("occupied")
-others <- housing %>% filter(!is.na(VACS)) %>% sdf_register("others")
 glimpse(occupied)
 glimpse(others)
 
@@ -88,7 +87,58 @@ occupied <- na.replace(occupied, 0)
 occupied <- occupied %>% mutate(VALP = VALP/1000)
 occupied %>% select(VALP) %>% collect %>% ggplot(aes(VALP)) + geom_histogram(bins = 100)
 occupied %>% select(VALP) %>% summarise(max(VALP), min(VALP), mean(VALP))
-#occupied <- occupied %>% filter(VALP <= 1200)
+
+# Identify the factors for which we shall create dummies
+occupied %>% 
+  group_by(ST) %>% 
+  summarise(n = n(), mean = mean(VALP), max = max(VALP), min = min(VALP)) %>%
+  arrange(desc(mean))
+
+occupied %>% 
+  group_by(TAXP) %>% 
+  summarise(n = n(), mean = mean(VALP), max = max(VALP), min = min(VALP)) %>%
+  arrange(desc(mean))
+
+occupied %>% 
+  group_by(YBL) %>% 
+  summarise(n = n(), mean = mean(VALP), max = max(VALP), min = min(VALP)) %>%
+  arrange(desc(mean))
+
+occupied %>% 
+  group_by(VEH) %>% 
+  summarise(n = n(), mean = mean(VALP), max = max(VALP), min = min(VALP)) %>%
+  arrange(desc(mean))
+
+occupied %>% 
+  group_by(BLD) %>% 
+  summarise(n = n(), mean = mean(VALP), max = max(VALP), min = min(VALP)) %>%
+  arrange(desc(mean))
+
+occupied %>% 
+  group_by(SATELLITE) %>% 
+  summarise(n = n(), mean = mean(VALP), max = max(VALP), min = min(VALP)) %>%
+  arrange(desc(mean))
+
+occupied %>% 
+  group_by(MRGX) %>% 
+  summarise(n = n(), mean = mean(VALP), max = max(VALP), min = min(VALP)) %>%
+  arrange(desc(mean))
+
+occupied %>% 
+  group_by(HFL) %>% 
+  summarise(n = n(), mean = mean(VALP), max = max(VALP), min = min(VALP)) %>%
+  arrange(desc(mean))
+
+occupied %>% 
+  group_by(BUS) %>% 
+  summarise(n = n(), mean = mean(VALP), max = max(VALP), min = min(VALP)) %>%
+  arrange(desc(mean))
+
+occupied %>% 
+  group_by(AGS) %>% 
+  summarise(n = n(), mean = mean(VALP), max = max(VALP), min = min(VALP)) %>%
+  arrange(desc(mean))
+
 
 # Adjust all numeric fields in 1000's except where feature represents number of children/people...
 occupied <- occupied %>% mutate(
@@ -132,26 +182,22 @@ occupied <- occupied %>% mutate(
 
 
 # Create dummies or treat levels in a factor accordingly
-#fColumns <- c('SATELLITE', 'SINK', 'HANDHELD', 'MODEM')
-#ACCESS, ACR, AGS, BATH, BLD, BROADBAND, BUS, COMPOTHX, DIALUP, DSL, FIBEROP, 
-#FS, HANDHELD, HFL, MODEM, MRGI, MRGT, MRGX, OTHSVCEX, REFR, RWAT, RWATPR,
-#SATELLITE, SINK, STOV, TEL, TEN, TOIL, VEH, FES, FPARC, HHL, HHT, HUGCL, HUPAC,
-#HUPAOC, HUPARC, KIT, LNGI, MULTG, MV, YBL, BPP, NR, PARTNER, PLM, PSF,
-#R18, R60, R65, RESMODE, SMX, SRNT, SSMC, SVAL, TAXP, WIF, WKEXREL, WORKSTAT,
-#PUMA, ST, TAXP
-#
-#
-#for(i in cols){
-#  occupied <- ml_create_dummy_variables(x=occupied,i)
-#}
+fFields <- c('BLD', 'ST', 'AGS', 'BUS', 'YBL', 'HFL', 'SATELLITE')
+
+for(i in fFields){
+  occupied <- ml_create_dummy_variables(x=occupied,i)
+}
 
 # Split into test and train or use cross-validation
 partition <- sdf_partition(occupied, train = 0.7, test = 0.3, seed = 1099)
 
 # Dependent & Indepedent Variables
-# Remove columns - WGTP, ADJHSG, ADJINC
+# Remove columns - WGTP, ADJHSG, ADJINC & columns where we have dummies
 n <- colnames(occupied)
-f <- as.formula(paste("VALP ~", paste(n[!n %in% c("VALP", "RT", "SERIALNO", "WGTP", "ADJHSG", "ADJINC", "VACS", "TYPE", "NP")], collapse = " + ")))
+e <- c('BLD', 'ST', 'AGS', 'BUS', 'YBL', 'HFL', 'SATELLITE', 'VALP', 
+       'RT', 'SERIALNO', 'WGTP', 'ADJHSG', 'ADJINC', 'VACS', 'TYPE', 'NP', 
+       'DIVISION', 'PUMA', 'REGION')
+f <- as.formula(paste("VALP ~", paste(n[!n %in% e], collapse = " + ")))
 
 # Run regression and determine if we remove certain independent variables
 fit <- ml_linear_regression(x = partition$train, f)
@@ -178,3 +224,19 @@ pTest %>%
     y = "Red - Actual, Blue - Predicted",
     title = "Linear Regression"
   )
+
+# Plot Actual vs Prediction where property value is greater than 2000 K
+pTest %>% 
+  filter(VALP > 2000) %>% 
+  select(SERIALNO, VALP, prediction) %>%
+  collect %>%
+  ggplot() +
+  geom_point(aes(x = row_number(SERIALNO), y = VALP), colour = "Red") +
+  geom_point(aes(x = row_number(SERIALNO), y = prediction), colour = "Blue") +
+  labs(
+    x = "Observations",
+    y = "Red - Actual, Blue - Predicted",
+    title = "Linear Regression"
+  )
+
+spark_disconnect(sc)
