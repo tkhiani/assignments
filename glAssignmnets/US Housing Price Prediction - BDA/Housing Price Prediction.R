@@ -139,7 +139,6 @@ occupied %>%
   summarise(n = n(), mean = mean(VALP), max = max(VALP), min = min(VALP)) %>%
   arrange(desc(mean))
 
-
 # Adjust all numeric fields in 1000's except where feature represents number of children/people...
 occupied <- occupied %>% mutate(
   ELEP = ELEP/1000,
@@ -162,6 +161,12 @@ occupied <- occupied %>% mutate(
   ADJINC = ADJINC/1000000,
   ADJHSG = ADJHSG/1000000)
 
+#n = c('ELEP', 'GASP', 'FULP', 'WATP', 'BDSP', 'CONP', 'INSP', 'MHP', 'MRGP',
+#      'RMSP', 'RNTP', 'SMP', 'GRNTP', 'FINCP', 'HINCP', 'OCPIP', 'SMOCP')
+
+#spark_apply(occupied, function(data) {
+#  data[,n] + scale()
+#})
 
 # Apply adjusment factor for constanst currencies
   # ADJHSG - CONP, ELEP, FULP, GASP, GRNTP, INSP, SMOCP, RNTP, SMP, WATP. 
@@ -180,9 +185,8 @@ occupied <- occupied %>% mutate(
   FINCP = FINCP*ADJINC, 
   HINCP = HINCP*ADJINC)
 
-
 # Create dummies or treat levels in a factor accordingly
-fFields <- c('BLD', 'ST', 'AGS', 'BUS', 'YBL', 'HFL', 'SATELLITE')
+fFields <- c('BLD', 'ST', 'AGS', 'BUS', 'YBL', 'HFL', 'SATELLITE', 'PUMA', 'TAXP')
 
 for(i in fFields){
   occupied <- ml_create_dummy_variables(x=occupied,i)
@@ -194,14 +198,15 @@ partition <- sdf_partition(occupied, train = 0.7, test = 0.3, seed = 1099)
 # Dependent & Indepedent Variables
 # Remove columns - WGTP, ADJHSG, ADJINC & columns where we have dummies
 n <- colnames(occupied)
-e <- c('BLD', 'ST', 'AGS', 'BUS', 'YBL', 'HFL', 'SATELLITE', 'VALP', 
-       'RT', 'SERIALNO', 'WGTP', 'ADJHSG', 'ADJINC', 'VACS', 'TYPE', 'NP', 
-       'DIVISION', 'PUMA', 'REGION')
+e <- append(fFields, c('VALP','RT', 'SERIALNO', 'WGTP', 'ADJHSG', 'ADJINC', 
+                       'VACS', 'TYPE', 'DIVISION', 'REGION'))
 f <- as.formula(paste("VALP ~", paste(n[!n %in% e], collapse = " + ")))
 
 # Run regression and determine if we remove certain independent variables
 fit <- ml_linear_regression(x = partition$train, f)
+
 summary(fit)
+#save(fit, file = "./glAssignmnets/BostonHousingPrices - Linear Regression/ValuPredictionModel")
 
 # Evaluate performance with an error function
 pTest <- sdf_predict(fit, partition$test)
