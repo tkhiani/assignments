@@ -212,6 +212,19 @@ noOfObservations <- pTest %>% summarise(n = n()) %>% collect
 rmse <- sqrt(sumOfSquaredErrors$se/noOfObservations$n)
 rmse
 
+sumOfSquaredErrors <- pTest %>% filter(VALP >= 2000) %>% select(VALP, prediction) %>% mutate(error = abs(VALP - prediction)^2) %>% summarise(se = sum(error)) %>% collect 
+noOfObservations <- pTest %>% filter(VALP >= 2000) %>% summarise(n = n()) %>% collect
+
+rmseForGreaterThan2M <- sqrt(sumOfSquaredErrors$se/noOfObservations$n)
+rmseForGreaterThan2M
+
+
+sumOfSquaredErrors <- pTest %>% filter(VALP < 2000) %>% select(VALP, prediction) %>% mutate(error = abs(VALP - prediction)^2) %>% summarise(se = sum(error)) %>% collect 
+noOfObservations <- pTest %>% filter(VALP < 2000) %>% summarise(n = n()) %>% collect
+
+rmseForLessThan2M <- sqrt(sumOfSquaredErrors$se/noOfObservations$n)
+rmseForLessThan2M
+
 # Plot Actual vs Prediction
 pTest %>% 
   select(SERIALNO, VALP, prediction) %>%
@@ -226,6 +239,7 @@ pTest %>%
   )
 
 # Plot Actual vs Prediction where property value is greater than 2000 K
+# Poor accuracy where property value is greater than 2M. It might be good to have 2 models one for homes less than 2M and those above 2M
 pTest %>% 
   filter(VALP > 2000) %>% 
   select(SERIALNO, VALP, prediction) %>%
@@ -240,3 +254,6 @@ pTest %>%
   )
 
 spark_disconnect(sc)
+rm(e, f, fFields, fit, i, n, occupied, partition, 
+   pTest, rmse, sc, sumOfSquaredErrors, noOfObservations,
+   rmseForGreaterThan2M, rmseForLessThan2M)
