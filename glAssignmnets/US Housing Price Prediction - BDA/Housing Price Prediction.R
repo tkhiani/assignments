@@ -186,7 +186,7 @@ occupied <- occupied %>% mutate(
   HINCP = HINCP*ADJINC)
 
 # Create dummies or treat levels in a factor accordingly
-fFields <- c('BLD', 'ST', 'AGS', 'BUS', 'YBL', 'HFL', 'SATELLITE', 'PUMA', 'TAXP')
+fFields <- c('BLD', 'ST', 'AGS', 'BUS', 'YBL', 'HFL', 'SATELLITE')
 
 for(i in fFields){
   occupied <- ml_create_dummy_variables(x=occupied,i)
@@ -198,7 +198,7 @@ partition <- sdf_partition(occupied, train = 0.7, test = 0.3, seed = 1099)
 # Dependent & Indepedent Variables
 # Remove columns - WGTP, ADJHSG, ADJINC & columns where we have dummies
 n <- colnames(occupied)
-e <- append(fFields, c('VALP','RT', 'SERIALNO', 'WGTP', 'ADJHSG', 'ADJINC', 
+e <- append(fFields, c('VALP','RT', 'SERIALNO', 'ADJHSG', 'ADJINC', 
                        'VACS', 'TYPE', 'DIVISION', 'REGION'))
 f <- as.formula(paste("VALP ~", paste(n[!n %in% e], collapse = " + ")))
 
@@ -229,6 +229,13 @@ noOfObservations <- pTest %>% filter(VALP < 2000) %>% summarise(n = n()) %>% col
 
 rmseForLessThan2M <- sqrt(sumOfSquaredErrors$se/noOfObservations$n)
 rmseForLessThan2M
+
+sumOfSquaredErrors <- pTest %>% filter(VALP < 1300) %>% select(VALP, prediction) %>% mutate(error = abs(VALP - prediction)^2) %>% summarise(se = sum(error)) %>% collect 
+noOfObservations <- pTest %>% filter(VALP < 1300) %>% summarise(n = n()) %>% collect
+
+rmseForLessThan1.3M <- sqrt(sumOfSquaredErrors$se/noOfObservations$n)
+rmseForLessThan1.3M
+
 
 # Plot Actual vs Prediction
 pTest %>% 
