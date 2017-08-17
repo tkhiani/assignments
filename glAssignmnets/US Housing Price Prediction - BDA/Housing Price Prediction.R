@@ -86,7 +86,6 @@ occupied <- na.replace(occupied, 0)
 # Understanding the distribution of the property value
 occupied <- occupied %>% mutate(VALP = VALP/1000)
 occupied %>% select(VALP) %>% collect %>% ggplot(aes(VALP)) + geom_histogram(bins = 100)
-occupied %>% select(VALP) %>% summarise(max(VALP), min(VALP), mean(VALP))
 
 # Identify the factors for which we shall create dummies
 occupied %>% 
@@ -105,39 +104,10 @@ occupied %>%
   arrange(desc(mean))
 
 occupied %>% 
-  group_by(VEH) %>% 
-  summarise(n = n(), mean = mean(VALP), max = max(VALP), min = min(VALP)) %>%
-  arrange(desc(mean))
-
-occupied %>% 
   group_by(BLD) %>% 
   summarise(n = n(), mean = mean(VALP), max = max(VALP), min = min(VALP)) %>%
   arrange(desc(mean))
 
-occupied %>% 
-  group_by(SATELLITE) %>% 
-  summarise(n = n(), mean = mean(VALP), max = max(VALP), min = min(VALP)) %>%
-  arrange(desc(mean))
-
-occupied %>% 
-  group_by(MRGX) %>% 
-  summarise(n = n(), mean = mean(VALP), max = max(VALP), min = min(VALP)) %>%
-  arrange(desc(mean))
-
-occupied %>% 
-  group_by(HFL) %>% 
-  summarise(n = n(), mean = mean(VALP), max = max(VALP), min = min(VALP)) %>%
-  arrange(desc(mean))
-
-occupied %>% 
-  group_by(BUS) %>% 
-  summarise(n = n(), mean = mean(VALP), max = max(VALP), min = min(VALP)) %>%
-  arrange(desc(mean))
-
-occupied %>% 
-  group_by(AGS) %>% 
-  summarise(n = n(), mean = mean(VALP), max = max(VALP), min = min(VALP)) %>%
-  arrange(desc(mean))
 
 # Adjust all numeric fields in 1000's except where feature represents number of children/people...
 occupied <- occupied %>% mutate(
@@ -161,13 +131,6 @@ occupied <- occupied %>% mutate(
   ADJINC = ADJINC/1000000,
   ADJHSG = ADJHSG/1000000)
 
-#n = c('ELEP', 'GASP', 'FULP', 'WATP', 'BDSP', 'CONP', 'INSP', 'MHP', 'MRGP',
-#      'RMSP', 'RNTP', 'SMP', 'GRNTP', 'FINCP', 'HINCP', 'OCPIP', 'SMOCP')
-
-#spark_apply(occupied, function(data) {
-#  data[,n] + scale()
-#})
-
 # Apply adjusment factor for constanst currencies
   # ADJHSG - CONP, ELEP, FULP, GASP, GRNTP, INSP, SMOCP, RNTP, SMP, WATP. 
   # Not applied to AGS & TAXP  
@@ -185,32 +148,44 @@ occupied <- occupied %>% mutate(
   FINCP = FINCP*ADJINC, 
   HINCP = HINCP*ADJINC)
 
-# Create dummies or treat levels in a factor accordingly
-fFields <- c('BLD', 'ST', 'AGS', 'BUS', 'YBL', 'HFL', 'SATELLITE')
-
-for(i in fFields){
-  occupied <- ml_create_dummy_variables(x=occupied,i)
-}
-
 # Split into test and train or use cross-validation
 partition <- sdf_partition(occupied, train = 0.7, test = 0.3, seed = 1099)
 
 # Dependent & Indepedent Variables
 # Remove columns - WGTP, ADJHSG, ADJINC & columns where we have dummies
 n <- colnames(occupied)
-e <- append(fFields, c('VALP','RT', 'SERIALNO', 'ADJHSG', 'ADJINC', 
-                       'VACS', 'TYPE', 'DIVISION', 'REGION'))
+e <- append(fFields, c('VALP','RT', 'SERIALNO', 'ADJHSG', 'ADJINC', 'VACS', 'TYPE'))
 f <- as.formula(paste("VALP ~", paste(n[!n %in% e], collapse = " + ")))
 
-# Run regression and determine if we remove certain independent variables
+# Let's identify the important variables
+fit0 <- ml_random_forest(x = partition$train, f, max.depth = 5, num.trees = 100, type = "regression")
+summary(fit0)
+feature_imp <- ml_tree_feature_importance(sc, fit0)
+
+# Let us now run regression two variants
+  # a. on all the 52 variables
+  # b. 6 variables that seems to the most important > 2%
+n <- as.character(feature_imp[1:52, 2])
+f <- as.formula(paste("VALP ~", paste(n, collapse = " + ")))
 fit <- ml_linear_regression(x = partition$train, f)
-
 summary(fit)
-#save(fit, file = "./glAssignmnets/BostonHousingPrices - Linear Regression/ValuPredictionModel")
 
+# Let's re-run regression removing the variables that are have significant p-value
+e <- c('HHT','PARTNER', 'REGION', 'MRGX', 'MV','BUS')
+f <- as.formula(paste("VALP ~", paste(features[!features %in% e], collapse = " + ")))
+fit1 <- ml_linear_regression(x = partition$train, f)
+summary(fit1)
+
+# Run regression only on the most important variables > 2%. Trying to check if a simpler model would be sufficient
+f <- as.formula("VALP ~ TAXP + SMOCP + MRGP + INSP + HINCP + DIVISION + FINCP + ST")
+fit2 <- ml_linear_regression(x = partition$train, f)
+summary(fit2)
+
+# As Fit 1 has a better r^2 and a root mean square error we choose fit1 which makes use of 46 variables
 # Evaluate performance with an error function
-pTest <- sdf_predict(fit, partition$test)
+pTest <- sdf_predict(fit1, partition$test)
 
+# Error function for lm
 sumOfSquaredErrors <- pTest %>% select(VALP, prediction) %>% mutate(error = abs(VALP - prediction)^2) %>% summarise(se = sum(error)) %>% collect 
 noOfObservations <- pTest %>% summarise(n = n()) %>% collect
 
@@ -223,19 +198,11 @@ noOfObservations <- pTest %>% filter(VALP >= 2000) %>% summarise(n = n()) %>% co
 rmseForGreaterThan2M <- sqrt(sumOfSquaredErrors$se/noOfObservations$n)
 rmseForGreaterThan2M
 
-
 sumOfSquaredErrors <- pTest %>% filter(VALP < 2000) %>% select(VALP, prediction) %>% mutate(error = abs(VALP - prediction)^2) %>% summarise(se = sum(error)) %>% collect 
 noOfObservations <- pTest %>% filter(VALP < 2000) %>% summarise(n = n()) %>% collect
 
 rmseForLessThan2M <- sqrt(sumOfSquaredErrors$se/noOfObservations$n)
 rmseForLessThan2M
-
-sumOfSquaredErrors <- pTest %>% filter(VALP < 1300) %>% select(VALP, prediction) %>% mutate(error = abs(VALP - prediction)^2) %>% summarise(se = sum(error)) %>% collect 
-noOfObservations <- pTest %>% filter(VALP < 1300) %>% summarise(n = n()) %>% collect
-
-rmseForLessThan1.3M <- sqrt(sumOfSquaredErrors$se/noOfObservations$n)
-rmseForLessThan1.3M
-
 
 # Plot Actual vs Prediction
 pTest %>% 
