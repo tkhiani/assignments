@@ -85,42 +85,118 @@ occupied <- na.replace(occupied, 0)
 
 # Understanding the distribution of the property value
 occupied <- occupied %>% mutate(VALP = VALP/1000)
+# Create a new variable to track house prices greater than 2M
+occupied <- occupied %>% mutate(ABOVE2M = if_else(VALP > 2000, 1, 0))
+
 occupied %>% select(VALP) %>% collect %>% ggplot(aes(VALP)) + geom_histogram(bins = 100)
 
 # Identify the factors for which we shall create dummies
 occupied %>% 
-  group_by(ST) %>% 
-  summarise(n = n(), mean = mean(VALP), max = max(VALP), min = min(VALP)) %>%
-  arrange(desc(mean))
+  select(ABOVE2M, ST, VALP) %>%
+  group_by(ABOVE2M, ST) %>%
+  collect() %>% data.frame() %>%
+  ggplot(aes(x = ST, y = ..count..)) + 
+  geom_bar() +
+  facet_wrap(~ABOVE2M)
 
 occupied %>% 
-  group_by(TAXP) %>% 
-  summarise(n = n(), mean = mean(VALP), max = max(VALP), min = min(VALP)) %>%
-  arrange(desc(mean))
+  select(ABOVE2M, TAXP, VALP) %>%
+  group_by(ABOVE2M, TAXP) %>%
+  collect() %>% data.frame() %>%
+  ggplot(aes(x = TAXP, y = ..count..)) + 
+  geom_bar() +
+  facet_wrap(~ABOVE2M)
 
 occupied %>% 
-  group_by(YBL) %>% 
-  summarise(n = n(), mean = mean(VALP), max = max(VALP), min = min(VALP)) %>%
-  arrange(desc(mean))
+  select(ABOVE2M, YBL, VALP) %>%
+  group_by(ABOVE2M, YBL) %>%
+  collect() %>% data.frame() %>%
+  ggplot(aes(x = YBL, y = ..count..)) + 
+  geom_bar() +
+  facet_wrap(~ABOVE2M)
+
+occupied %>%
+  select(ABOVE2M, BLD, VALP) %>%
+  group_by(ABOVE2M, BLD) %>%
+  collect() %>% data.frame() %>%
+  ggplot(aes(x = BLD, y = ..count..)) + 
+  geom_bar() +
+  facet_wrap(~ABOVE2M)
 
 occupied %>% 
-  group_by(BLD) %>% 
-  summarise(n = n(), mean = mean(VALP), max = max(VALP), min = min(VALP)) %>%
-  arrange(desc(mean))
+  select(ABOVE2M, INSP) %>%
+  group_by(ABOVE2M) %>%
+  summarise(mean = mean(INSP)) %>%
+  collect() %>% data.frame() %>%
+  ggplot(aes(x = ABOVE2M, y = mean)) + 
+  geom_point() 
 
+occupied %>% 
+  select(ABOVE2M, SMOCP) %>%
+  group_by(ABOVE2M) %>%
+  summarise(mean = mean(SMOCP)) %>%
+  collect() %>% data.frame() %>%
+  ggplot(aes(x = ABOVE2M, y = mean)) + 
+  geom_point() 
+
+occupied %>% 
+  select(ABOVE2M, HINCP) %>%
+  group_by(ABOVE2M) %>%
+  summarise(mean = mean(HINCP)) %>%
+  collect() %>% data.frame() %>%
+  ggplot(aes(x = ABOVE2M, y = mean)) + 
+  geom_point() 
+
+occupied %>% 
+  select(ABOVE2M, FINCP) %>%
+  group_by(ABOVE2M) %>%
+  summarise(mean = mean(FINCP)) %>%
+  collect() %>% data.frame() %>%
+  ggplot(aes(x = ABOVE2M, y = mean)) + 
+  geom_point() 
+
+occupied %>% 
+  select(ABOVE2M, MRGP) %>%
+  group_by(ABOVE2M) %>%
+  summarise(mean = mean(MRGP)) %>%
+  collect() %>% data.frame() %>%
+  ggplot(aes(x = ABOVE2M, y = mean)) + 
+  geom_point() 
+
+occupied %>% 
+  select(ABOVE2M, BDSP) %>%
+  group_by(ABOVE2M) %>%
+  summarise(mean = mean(BDSP)) %>%
+  collect() %>% data.frame() %>%
+  ggplot(aes(x = ABOVE2M, y = mean)) + 
+  geom_point() 
+
+occupied %>% 
+  select(ABOVE2M, RMSP) %>%
+  group_by(ABOVE2M) %>%
+  summarise(mean = mean(RMSP)) %>%
+  collect() %>% data.frame() %>%
+  ggplot(aes(x = ABOVE2M, y = mean)) + 
+  geom_point() 
+
+occupied %>% 
+  select(ABOVE2M, ELEP) %>%
+  group_by(ABOVE2M) %>%
+  summarise(mean = mean(ELEP)) %>%
+  collect() %>% data.frame() %>%
+  ggplot(aes(x = ABOVE2M, y = mean)) + 
+  geom_point() 
 
 # Adjust all numeric fields in 1000's except where feature represents number of children/people...
 occupied <- occupied %>% mutate(
   ELEP = ELEP/1000,
   GASP = GASP/1000,
   FULP = FULP/1000,
-  WATP = WATP/1000,
-  BDSP = BDSP/1000, 
+  WATP = WATP/1000, 
   CONP = CONP/1000, 
   INSP = INSP/1000, 
   MHP = MHP/1000, 
   MRGP = MRGP/1000, 
-  RMSP = RMSP/1000, 
   RNTP = RNTP/1000, 
   SMP = SMP/1000, 
   GRNTP = GRNTP/1000, 
@@ -150,11 +226,34 @@ occupied <- occupied %>% mutate(
 
 # Split into test and train or use cross-validation
 partition <- sdf_partition(occupied, train = 0.7, test = 0.3, seed = 1099)
+n <- colnames(occupied)
+
+# Let us try to understand how to classify houses above 2M
+e <- c('VALP','RT', 'SERIALNO', 'ADJHSG', 'ADJINC', 'VACS', 'TYPE', 'ABOVE2M')
+f <- as.formula(paste("ABOVE2M ~", paste(n[!n %in% e], collapse = " + ")))
+
+# Let's identify the important variables
+fitToClassify <- ml_random_forest(x = partition$train, f, max.depth = 5, num.trees = 100, type = "classification")
+feature_imp <- ml_tree_feature_importance(sc, fitToClassify)
+feature_imp
+
+# let's try to cluster
+c <- tbl_vars(partition$train)
+e <- c('RT', 'SERIALNO', 'ADJHSG', 'ADJINC', 'VACS', 'TYPE', 'ABOVE2M')
+c <- c[!c %in% e]
+clusters <- ml_kmeans(x = partition$train, centers = 2, features = c)
+clusters$centers
+
+partition$train %>%
+  select(ABOVE2M, TAXP) %>%
+  collect %>%
+  ggplot(aes(y = VALP, x = TAXP)) +
+  geom_point(data = clusters$centers, aes(y = VALP, x = TAXP), size = 60, alpha = 0.1) +
+  geom_point(aes(y = VALP, x = TAXP), size = 2, alpha = 0.5)
 
 # Dependent & Indepedent Variables
 # Remove columns - WGTP, ADJHSG, ADJINC & columns where we have dummies
-n <- colnames(occupied)
-e <- append(fFields, c('VALP','RT', 'SERIALNO', 'ADJHSG', 'ADJINC', 'VACS', 'TYPE'))
+e <- c('VALP','RT', 'SERIALNO', 'ADJHSG', 'ADJINC', 'VACS', 'TYPE')
 f <- as.formula(paste("VALP ~", paste(n[!n %in% e], collapse = " + ")))
 
 # Let's identify the important variables

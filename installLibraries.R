@@ -61,5 +61,10 @@ install.packages("fBasics")
 install.packages("rattle")
 install.packages("sparklyr")
 install.packages("devtools")
+install.packages("rmarkdown")
+install.packages("pipeR")
+install.packages("whisker")
+install.packages("data.table")
+install.packages("rJava")
 
 
