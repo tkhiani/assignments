@@ -66,5 +66,10 @@ install.packages("pipeR")
 install.packages("whisker")
 install.packages("data.table")
 install.packages("rJava")
+install.packages("Rserve")
+install.packages("pracma")
+install.packages("RODBC")
+install.packages("arules")
+install.packages("arulesViz")
 
 
