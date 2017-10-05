@@ -3,6 +3,8 @@
 library(dplyr)
 library(dummies)
 library(caTools)
+library(lmtest)
+library(pscl)
 library(car)
 library(caret)
 library(pROC)
@@ -150,12 +152,22 @@ train <- train %>%
     -X2nd_Road_Class.6
   )
 
+# Run the logistic regression model. Should we consider interaction affect?
 logit1 <- glm(Accident_Severity~., data = train, family = "binomial")
-sort(vif(logit1), decreasing = TRUE) %>% as.data.frame()
-
+vif <- sort(vif(logit1), decreasing = TRUE) %>% as.data.frame()
+vif
 summary(logit1)
+# Evaluate overall significance
+lrtest(logit1)
+# Evaluate what % of the intercept only model explains churn
+pR2(logit1)
+
 exp(coef(logit1))
 
+# Determine which variables to omit based on the odds ratio and p-value
+
+
+# Evaluate model performance on training sample
 predictedProbabilityForTrain <- logit1$fitted.values
 predictedSeverityForTrain <- ifelse(predictedProbabilityForTrain < 0.45, "0", "1")
 confusionMatrix(predictedSeverityForTrain, train$Accident_Severity, positive = "1")
@@ -163,9 +175,10 @@ rocForTrain<- roc(train$Accident_Severity,predictedProbabilityForTrain)
 rocForTrain
 plot(rocForTrain)
 
-# Cross Validation
-# createFolds()
-# Determing ROC and plot
+# Cross Validation - Determing ROC and plot
+# Should we use the folds to build the model & validate or just run the model to validate
+# trainingFolds <- createFolds(train, k = 10, returnTrain = TRUE)
+
 
 # Evaluate performance on the test sample
 predictedProbabilityForTest <- predict(logit1, newdata = test, type = "response")
