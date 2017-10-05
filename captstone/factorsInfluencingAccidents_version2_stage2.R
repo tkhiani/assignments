@@ -175,10 +175,11 @@ rocForTrain<- roc(train$Accident_Severity,predictedProbabilityForTrain)
 rocForTrain
 plot(rocForTrain)
 
-# Cross Validation - Determing ROC and plot
-# Should we use the folds to build the model & validate or just run the model to validate
+# Cross Validation 
 # trainingFolds <- createFolds(train, k = 10, returnTrain = TRUE)
-
+# build model on the testFold then validate using the trainFold
+# repeat the exercise for the 10 folds and plot the ROC for all the folds
+# which model should we use - the best or all are approx. the same?
 
 # Evaluate performance on the test sample
 predictedProbabilityForTest <- predict(logit1, newdata = test, type = "response")
