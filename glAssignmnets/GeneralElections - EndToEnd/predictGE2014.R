@@ -5,8 +5,8 @@ library(ggplot2)
 library(pROC)
 library(caret)
 
-candidates2009 <- read.csv("./glAssignmnets/GeneralElections - EndToEnd/candidatesIn2009.csv")
-candidates2014 <- read.csv("./glAssignmnets/GeneralElections - EndToEnd/candidatesIn2014.csv")
+candidates2009 <- read.csv("./largeDataSets/generalElections - EndToEnd/candidatesIn2009.csv")
+candidates2014 <- read.csv("./largeDataSets/generalElections - EndToEnd/candidatesIn2014.csv")
 
 candidates2009$seat_won <- as.factor(candidates2009$seat_won)
 

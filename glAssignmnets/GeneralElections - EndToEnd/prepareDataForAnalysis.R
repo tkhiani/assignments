@@ -108,10 +108,10 @@ candidatesIn2009 <- candidateInformation(urlCandidates2009,
                                          urlcandidates2009WithSeriousCriminalCases, 
                                          urlCandidates2009Female,
                                          urlCandidates2009WhoWon)
-write.csv(candidatesIn2009, "./glAssignmnets/GeneralElections - EndToEnd/candidatesIn2009.csv")
+write.csv(candidatesIn2009, "./largeDataSets/generalElections - EndToEnd/candidatesIn2009.csv")
 
 candidatesIn2014 <- candidateInformation(urlCandidates2014,
                                          urlCandidates2014WithSeriousCriminalCases,
                                          urlCandidates2014Female,
                                          urlCandidates2014WhoWon)
-write.csv(candidatesIn2014, "./glAssignmnets/GeneralElections - EndToEnd/candidatesIn2014.csv")
+write.csv(candidatesIn2014, "./largeDataSets/generalElections - EndToEnd/candidatesIn2014.csv")

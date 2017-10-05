@@ -8,14 +8,14 @@ library(randomForest)
 
 telangana <- c(1, 14, 10, 9, 3, 17, 16, 11, 7, 6, 12, 13, 4, 2, 8, 15, 5)
 
-electionResults <- data.frame(read_excel(path = "./glAssignmnets/GeneralElections - EndToEnd/GE_2009.xls", sheet = "cand_wise")) %>% 
+electionResults <- data.frame(read_excel(path = "./largeDataSets/generalElections - EndToEnd/GE_2009.xls", sheet = "cand_wise")) %>%
   dplyr::mutate(
     SEAT_WON = if_else(POSITION == 1, 1, 0),
     ST_NAME = if_else(ST_NAME == "Andhra Pradesh" & PC_NO %in% telangana, "Telangana", ST_NAME),
     ST_PC = paste(ST_NAME, PC_NO, sep = "_")) %>%
   dplyr::select(ST_PC, ST_NAME, PARTYABBRE, TOTVOTPOLL, SEAT_WON, POSITION)
 
-electors <- data.frame(read_excel(path = "./glAssignmnets/GeneralElections - EndToEnd/GE_2009.xls", sheet = "electors")) %>%
+electors <- data.frame(read_excel(path = "./largeDataSets/generalElections - EndToEnd/GE_2009.xls", sheet = "electors")) %>%
   dplyr::mutate(
     ST_NAME = if_else(ST_NAME == "Andhra Pradesh" & PC_NO %in% telangana, "Telangana", ST_NAME),
     ST_PC = paste(ST_NAME, PC_NO, sep = "_")) %>%
