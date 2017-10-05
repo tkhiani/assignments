@@ -2,6 +2,7 @@
 # We do not run VIF as we have done so in version1_stage1
 library(dplyr)
 library(dummies)
+library(caTools)
 library(car)
 library(caret)
 library(pROC)
@@ -80,8 +81,24 @@ accidents <- accidents %>%
     -no_of_unknowncc_occupant
   )
 
+# Split the data into test and train
+# Oversample the number of serious accidents in the training sample
+set.seed(9090)
+split <- sample.split(accidents$Accident_Severity, SplitRatio = 0.70)
+train <- subset(accidents, split == TRUE)
+
+seriousAccidentsInTrain <- dplyr::filter(train, Accident_Severity == "1")
+train <- rbind(train, seriousAccidentsInTrain)
+train <- rbind(train, seriousAccidentsInTrain)
+train <- rbind(train, seriousAccidentsInTrain)
+
+test <- subset(accidents, split == FALSE)
+
+# Free up memory
+rm(accidents, seriousAccidentsInTrain, split)
+
 # Remove variables that have a linear relationship as indicated by alias & their coeffecitents are also NA
-accidents <- accidents %>% 
+train <- train %>% 
   dplyr::select(
     -Day_of_Week.7,
     -X1st_Road_Class.6,
@@ -96,7 +113,7 @@ accidents <- accidents %>%
     )
 
 # Remove variables that have a VIF score greater than 5
-accidents <- accidents %>% 
+train <- train %>% 
   dplyr::select(
     -Junction_Detail.0,
     -no_veh_notNextToJunction,
@@ -129,18 +146,31 @@ accidents <- accidents %>%
     -no_eMotorCycle,
     -no_of_veh_2000cc,
     -no_mobilityScooter,
-    -no_veh_leftHandDrive    
+    -no_veh_leftHandDrive,
+    -X2nd_Road_Class.6
   )
 
-logit1 <- glm(Accident_Severity~., data = accidents, family = "binomial")
+logit1 <- glm(Accident_Severity~., data = train, family = "binomial")
 sort(vif(logit1), decreasing = TRUE) %>% as.data.frame()
 
 summary(logit1)
 exp(coef(logit1))
 
-predictedProbability <- logit1$fitted.values
-predictedSeverity <- ifelse(predictedProbability<=0.3, "0", "1")
-confusionMatrix(predictedSeverity, accidents$Accident_Severity, positive = "1")
-roc <- roc(accidents$Accident_Severity,predictedProbability)
-roc
-plot(roc)
+predictedProbabilityForTrain <- logit1$fitted.values
+predictedSeverityForTrain <- ifelse(predictedProbabilityForTrain < 0.45, "0", "1")
+confusionMatrix(predictedSeverityForTrain, train$Accident_Severity, positive = "1")
+rocForTrain<- roc(train$Accident_Severity,predictedProbabilityForTrain)
+rocForTrain
+plot(rocForTrain)
+
+# Cross Validation
+# createFolds()
+# Determing ROC and plot
+
+# Evaluate performance on the test sample
+predictedProbabilityForTest <- predict(logit1, newdata = test, type = "response")
+predictedSeverityForTest <- ifelse(predictedProbabilityForTest < 0.45, "0", "1")
+confusionMatrix(predictedSeverityForTest, test$Accident_Severity, positive = "1")
+rocForTest <- roc(test$Accident_Severity, predictedProbabilityForTest)
+rocForTest
+plot(rocForTest)
