@@ -152,20 +152,65 @@ train <- train %>%
     -X2nd_Road_Class.6
   )
 
-# Run the logistic regression model. Should we consider interaction affect?
+# Run the logistic regression model
+logit1 <- glm(Accident_Severity~., data = train, family = "binomial")
+vif <- sort(vif(logit1), decreasing = TRUE) %>% as.data.frame()
+vif
+summary(logit1)
+
+# Evaluate overall significance
+overallSignificance <- lrtest(logit1)
+overallSignificance
+# Evaluate what % of the intercept only model explains churn
+mcFadensR2 <- pR2(logit1)
+mcFadensR2
+# Odds Ratio
+oddsRatio <- exp(coef(logit1)) %>% data.frame()
+oddsRatio
+
+# Determine which variables to omit based on the odds ratio and p-value
+train <- train %>% 
+  dplyr::select(
+    -X1st_Road_Class.4,
+    -Road_Type.1,
+    -Road_Type.2,
+    -Road_Type.7,
+    -Speed_limit.0,
+    -Speed_limit.10,
+    -Junction_Detail.2,
+    -Junction_Detail.6,
+    -Junction_Control.2,
+    -X2nd_Road_Class.1,
+    -Weather_Conditions.3,
+    -Weather_Conditions.6,
+    -Road_Surface_Conditions.5,
+    -Special_Conditions_at_Site.2,
+    -Special_Conditions_at_Site.3,
+    -Carriageway_Hazards.6,
+    -no_of_veh_1500cc,
+    -no_veh_rightHandDrive,
+    -no_with_no_impact,
+    -no_veh_clearedJunction,
+    -no_of_tram_occupant,
+    -no_of_female_casualties,
+    -no_of_casualties_notin_homearea,
+    -no_of_casualties_in_roadmainworker
+  )
+
+# Run the logistic regression model
 logit1 <- glm(Accident_Severity~., data = train, family = "binomial")
 vif <- sort(vif(logit1), decreasing = TRUE) %>% as.data.frame()
 vif
 summary(logit1)
 # Evaluate overall significance
-lrtest(logit1)
+overallSignificance <- lrtest(logit1)
+overallSignificance
 # Evaluate what % of the intercept only model explains churn
-pR2(logit1)
-
-exp(coef(logit1))
-
-# Determine which variables to omit based on the odds ratio and p-value
-
+mcFadensR2 <- pR2(logit1)
+mcFadensR2
+# Odds Ratio
+oddsRatio <- exp(coef(logit1)) %>% data.frame()
+oddsRatio
 
 # Evaluate model performance on training sample
 predictedProbabilityForTrain <- logit1$fitted.values
@@ -174,6 +219,9 @@ confusionMatrix(predictedSeverityForTrain, train$Accident_Severity, positive = "
 rocForTrain<- roc(train$Accident_Severity,predictedProbabilityForTrain)
 rocForTrain
 plot(rocForTrain)
+
+predictedProbabilityForTrain %>% data.frame() %>% ggplot() + 
+  geom_histogram(aes(., fill = "Red"))
 
 # Cross Validation 
 # trainingFolds <- createFolds(train, k = 10, returnTrain = TRUE)
