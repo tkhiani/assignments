@@ -2,6 +2,8 @@ library(readxl)
 library(dplyr)
 library(psych)
 library(scales)
+library(caret)
+library(pROC)
 
 companyData <- readxl::read_excel('./largeDataSets/finance-risk-analytics/raw-data.xlsx', 
                                   sheet = 'raw data') %>% as.data.frame()
@@ -29,16 +31,25 @@ companyData <- companyData %>%
 
 numberOfColumns = ncol(companyData) - 1
 
-quantile(companyData$`Total assets`, c(.02, .98))
-
-
-
 for(i in 1:numberOfColumns) {
   quantile <- quantile(companyData[,i], c(.02, .98))
   companyData[,i] <- if_else(companyData[,i] < quantile[1], quantile[1], 
           if_else(companyData[,i] > quantile[2], quantile[2], companyData[,i]))
 }
 
-colnames(companyData)
+set.seed(9090)
+split <- caTools::sample.split(companyData$willDefault, SplitRatio = 0.70)
+train <- subset(companyData, split == TRUE)
+test <- subset(companyData, split == FALSE)
 
-lm_model <- glm(willDefault~., companyData, family = 'binomial')
+logit1 <- glm(willDefault~., train, family = 'binomial')
+summary(logit1)
+exp(coef(logit1))
+
+# Evaluate performance on the test sample
+predictedProbabilityForTest <- predict(logit1, newdata = test, type = "response")
+predictedSeverityForTest <- ifelse(predictedProbabilityForTest < 0.50, "0", "1")
+confusionMatrix(predictedSeverityForTest, test$willDefault, positive = "1")
+rocForTest <- roc(test$willDefault, predictedProbabilityForTest)
+rocForTest
+plot(rocForTest)
