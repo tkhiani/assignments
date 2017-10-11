@@ -11,11 +11,7 @@ library(pROC)
 
 options(max.print=2000)
 
-accidents <- read.csv('./largeDataSets/capstone - accident/consolidatedAccidentData.csv')
-
-accidents <- accidents %>%
-  dplyr::mutate(Date = as.Date(Date, "%Y-%m-%d")) %>%
-  dplyr::filter(Date > as.Date("30/12/2013", "%d/%m/%Y"))
+accidents <- read.csv('./largeDataSets/capstone - accident/consolidatedsubSetAccidentDataFor2010To2015.csv')
 
 # Remove variables that are not needed 
 accidents <- accidents %>% 
@@ -61,11 +57,11 @@ accidents <- accidents %>%
     -`X2nd_Road_Class.-1`,
     -`Road_Surface_Conditions.-1`,
     -`Special_Conditions_at_Site.-1`,
-    -`Junction_Detail.-1`,
     -`Junction_Control.-1`,
     -`Pedestrian_Crossing.Human_Control.-1`,
     -`Pedestrian_Crossing.Physical_Facilities.-1`,
     -`Carriageway_Hazards.-1`,
+    -`Weather_Conditions.-1`,
     -no_of_veh_in_ageNotKnown,
     -no_veh_driveNotKnown,
     -no_with_impactNotKnown,
