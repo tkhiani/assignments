@@ -43,7 +43,7 @@ for(i in c(4:19)) {
 }
 
 accidents <- accidents %>%
-  dplyr::mutate(Accident_Severity = if_else(Accident_Severity %in% c(1,2), 1, 0))
+  dplyr::mutate(Accident_Severity = if_else(Accident_Severity %in% c(1,3), 0, 1))
 
 Accident_Severity <- accidents$Accident_Severity
 accidents <- dummy.data.frame(accidents[-1], sep = ".")
@@ -102,64 +102,56 @@ train <- train %>%
     -X1st_Road_Class.6,
     -Road_Type.9,
     -Speed_limit.70,
+    -Junction_Detail.9,
     -Light_Conditions.7,
-    -Weather_Conditions.9,
     -Urban_or_Rural_Area.2,
     -Day.5,
     -no_of_other_drivers,
     -no_of_pedestrains
-    )
+  )
 
 # Remove variables that have a VIF score greater than 5
 train <- train %>% 
   dplyr::select(
-    -Junction_Detail.0,
+    -Carriageway_Hazards.0,
+    -no_of_emotorcycle_occupant,
+    -Pedestrian_Crossing.Physical_Facilities.0,
+    -Weather_Conditions.1,
     -no_veh_notNextToJunction,
     -no_veh_goingAheadOther,
-    -Pedestrian_Crossing.Physical_Facilities.0,
     -Number_of_Vehicles,
     -no_of_car_occupant,
-    -Junction_Control.4,
     -Special_Conditions_at_Site.0,
-    -Road_Surface_Conditions.1,
     -no_with_front_impact,
-    -Carriageway_Hazards.0,
-    -Number_of_Casualties,
+    -Junction_Detail.0,
     -no_car,
-    -Junction_Detail.3,
-    -Road_Type.6,
-    -no_of_passengers,
-    -no_of_cyclist,
-    -Light_Conditions.1,
-    -no_motocyle_under_125cc,
+    -Road_Surface_Conditions.1,
     -Pedestrian_Crossing.Human_Control.0,
-    -no_motocyle_under_50cc,
+    -Number_of_Casualties,
+    -Road_Type.6,
+    -Junction_Control.4,
+    -no_of_passengers,
+    -no_riddenHorse,
+    -no_cycles,
+    -Light_Conditions.1,
+    -no_of_125cc_occupant,
+    -X2nd_Road_Class.6,
+    -no_of_50cc_occupant,
     -no_of_male_drivers,
     -Speed_limit.30,
-    -Weather_Conditions.1,
-    -no_motocyle_over_500cc,
-    -no_riddenHorse,
-    -no_motocyle_under_500cc,
+    -no_of_over500cc_occupant,
     -no_of_ped_inCarriagewayCrossing,
-    -no_eMotorCycle,
+    -no_of_500cc_occupant,
     -no_of_veh_2000cc,
-    -no_mobilityScooter,
     -no_veh_leftHandDrive,
-    -X2nd_Road_Class.6
-  )
+    -no_of_scooter_occupant
+    )
 
 # Run the logistic regression model
 logit1 <- glm(Accident_Severity~., data = train, family = "binomial")
 vif <- sort(vif(logit1), decreasing = TRUE) %>% as.data.frame()
 vif
 summary(logit1)
-
-# Evaluate overall significance
-overallSignificance <- lrtest(logit1)
-overallSignificance
-# Evaluate what % of the intercept only model explains churn
-mcFadensR2 <- pR2(logit1)
-mcFadensR2
 # Odds Ratio
 oddsRatio <- exp(coef(logit1)) %>% data.frame()
 oddsRatio
@@ -167,31 +159,30 @@ oddsRatio
 # Determine which variables to omit based on the odds ratio and p-value
 train <- train %>% 
   dplyr::select(
-    -X1st_Road_Class.4,
-    -Road_Type.1,
-    -Road_Type.2,
-    -Road_Type.7,
-    -Speed_limit.0,
+    -X1st_Road_Class.2,
     -Speed_limit.10,
     -Junction_Detail.2,
-    -Junction_Detail.6,
-    -Junction_Control.2,
+    -Junction_Control.3,
     -X2nd_Road_Class.1,
+    -X2nd_Road_Class.2,
+    -Pedestrian_Crossing.Human_Control.2,
+    -Pedestrian_Crossing.Physical_Facilities.5,
+    -Pedestrian_Crossing.Physical_Facilities.7,
     -Weather_Conditions.3,
-    -Weather_Conditions.6,
+    -Weather_Conditions.4,
+    -Weather_Conditions.7,
+    -Weather_Conditions.9,
     -Road_Surface_Conditions.5,
-    -Special_Conditions_at_Site.2,
     -Special_Conditions_at_Site.3,
-    -Carriageway_Hazards.6,
-    -no_of_veh_1500cc,
-    -no_veh_rightHandDrive,
+    -no_of_female_drivers,
+    -no_taking_toAndFrom_school,
     -no_with_no_impact,
-    -no_veh_clearedJunction,
+    -no_taxi,
+    -no_of_ped_inCarriagewayStationary,
     -no_of_tram_occupant,
-    -no_of_female_casualties,
-    -no_of_casualties_notin_homearea,
-    -no_of_casualties_in_roadmainworker
+    -no_of_goodsveh7.5t_occupant
   )
+    
 
 # Run the logistic regression model
 logit1 <- glm(Accident_Severity~., data = train, family = "binomial")
@@ -210,25 +201,46 @@ oddsRatio
 
 # Evaluate model performance on training sample
 predictedProbabilityForTrain <- logit1$fitted.values
-predictedSeverityForTrain <- ifelse(predictedProbabilityForTrain < 0.45, "0", "1")
-confusionMatrix(predictedSeverityForTrain, train$Accident_Severity, positive = "1")
 rocForTrain<- roc(train$Accident_Severity,predictedProbabilityForTrain)
 rocForTrain
 plot(rocForTrain)
 
 predictedProbabilityForTrain %>% data.frame() %>% ggplot() + 
   geom_histogram(aes(., fill = "Red"))
+predictedSeverityForTrain <- ifelse(predictedProbabilityForTrain < 0.45, "0", "1")
+confusionMatrix(predictedSeverityForTrain, train$Accident_Severity, positive = "1")
 
 # Cross Validation 
-# trainingFolds <- createFolds(train, k = 10, returnTrain = TRUE)
-# build model on the testFold then validate using the trainFold
-# repeat the exercise for the 10 folds and plot the ROC for all the folds
-# which model should we use - the best or all are approx. the same?
+trainingFolds <- createFolds(train$Accident_Severity, k = 10, returnTrain = TRUE)
+rocForFolds <- lapply(trainingFolds, function(x) {
+  trainFold <- train[x,]
+  testFold <- train[-x,]
+  logitOnFold <- glm(Accident_Severity~., data = trainFold, family = "binomial")
+  predictedProbabilityForTestFold <- predict(logitOnFold, newdata = testFold, type = "response")
+  rocForTestFold <- roc(testFold$Accident_Severity, predictedProbabilityForTestFold)
+  rocForTestFold
+})
+
+rocForFoldsAsDataFrame <- data.frame(c(
+  rocForFolds$Fold01$auc[1], 
+  rocForFolds$Fold02$auc[1], 
+  rocForFolds$Fold03$auc[1], 
+  rocForFolds$Fold04$auc[1], 
+  rocForFolds$Fold05$auc[1], 
+  rocForFolds$Fold06$auc[1], 
+  rocForFolds$Fold07$auc[1], 
+  rocForFolds$Fold08$auc[1], 
+  rocForFolds$Fold09$auc[1], 
+  rocForFolds$Fold10$auc[1] 
+))
+
+plot(rocForFoldsAsDataFrame[,1], type = 'b')
 
 # Evaluate performance on the test sample
 predictedProbabilityForTest <- predict(logit1, newdata = test, type = "response")
-predictedSeverityForTest <- ifelse(predictedProbabilityForTest < 0.45, "0", "1")
-confusionMatrix(predictedSeverityForTest, test$Accident_Severity, positive = "1")
 rocForTest <- roc(test$Accident_Severity, predictedProbabilityForTest)
 rocForTest
 plot(rocForTest)
+
+predictedSeverityForTest <- ifelse(predictedProbabilityForTest < 0.45, "0", "1")
+confusionMatrix(predictedSeverityForTest, test$Accident_Severity, positive = "1")

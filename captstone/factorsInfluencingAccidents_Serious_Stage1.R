@@ -7,11 +7,7 @@ library(pROC)
 
 options(max.print=2000)
 
-accidents <- read.csv('./largeDataSets/capstone - accident/consolidatedAccidentData.csv')
-
-accidents <- accidents %>%
-  dplyr::mutate(Date = as.Date(Date, "%Y-%m-%d")) %>%
-  dplyr::filter(Date > as.Date("30/12/2013", "%d/%m/%Y"))
+accidents <- read.csv('./largeDataSets/capstone - accident/consolidatedsubSetAccidentDataFor2010To2015.csv')
 
 # Remove variables that are not needed 
 accidents <- accidents %>% 
@@ -43,7 +39,7 @@ for(i in c(4:19)) {
 }
 
 accidents <- accidents %>%
-  dplyr::mutate(Accident_Severity = if_else(Accident_Severity %in% c(1,2), 1, 0))
+  dplyr::mutate(Accident_Severity = if_else(Accident_Severity %in% c(1,3), 0, 1))
 
 Accident_Severity <- accidents$Accident_Severity
 accidents <- dummy.data.frame(accidents[-1], sep = ".")
@@ -57,11 +53,11 @@ accidents <- accidents %>%
     -`X2nd_Road_Class.-1`,
     -`Road_Surface_Conditions.-1`,
     -`Special_Conditions_at_Site.-1`,
-    -`Junction_Detail.-1`,
     -`Junction_Control.-1`,
     -`Pedestrian_Crossing.Human_Control.-1`,
     -`Pedestrian_Crossing.Physical_Facilities.-1`,
     -`Carriageway_Hazards.-1`,
+    -`Weather_Conditions.-1`,
     -no_of_veh_in_ageNotKnown,
     -no_veh_driveNotKnown,
     -no_with_impactNotKnown,
@@ -90,8 +86,8 @@ accidents <- accidents %>%
     -X1st_Road_Class.6,
     -Road_Type.9,
     -Speed_limit.70,
+    -Junction_Detail.9,
     -Light_Conditions.7,
-    -Weather_Conditions.9,
     -Urban_or_Rural_Area.2,
     -Day.5,
     -no_of_other_drivers,
@@ -103,30 +99,44 @@ summary(logit1)
 alias(logit1)
 sort(vif(logit1), decreasing = TRUE) %>% as.data.frame()
 
-# Remove Junction_Detail.0that has the highest VIF Score
+# Remove Carriageway_Hazards.0 that has the highest VIF Score
 accidents <- accidents %>% 
-  dplyr::select(-Junction_Detail.0 )
+  dplyr::select(-Carriageway_Hazards.0)
 
 logit1 <- glm(Accident_Severity~., data = accidents, family = "binomial")
 sort(vif(logit1), decreasing = TRUE) %>% as.data.frame()
 
-# Remove Number of no_veh_notNextToJunction that has the highest VIF Score
+# Remove Number of no_of_emotorcycle_occupant that has the highest VIF Score
+accidents <- accidents %>% 
+  dplyr::select(-no_of_emotorcycle_occupant)
+
+logit1 <- glm(Accident_Severity~., data = accidents, family = "binomial")
+sort(vif(logit1), decreasing = TRUE) %>% as.data.frame()
+
+# Remove Pedestrian_Crossing.Physical_Facilities.0 that has the highest VIF Score
+accidents <- accidents %>% 
+  dplyr::select(-Pedestrian_Crossing.Physical_Facilities.0)
+
+logit1 <- glm(Accident_Severity~., data = accidents, family = "binomial")
+sort(vif(logit1), decreasing = TRUE) %>% as.data.frame()
+
+# Remove Weather_Conditions.1 with the highest VIF Score
+accidents <- accidents %>% 
+  dplyr::select(-Weather_Conditions.1)
+
+logit1 <- glm(Accident_Severity~., data = accidents, family = "binomial")
+sort(vif(logit1), decreasing = TRUE) %>% as.data.frame()
+
+# Remove no_veh_notNextToJunction with the highest VIF Score
 accidents <- accidents %>% 
   dplyr::select(-no_veh_notNextToJunction)
 
 logit1 <- glm(Accident_Severity~., data = accidents, family = "binomial")
 sort(vif(logit1), decreasing = TRUE) %>% as.data.frame()
 
-# Remove no_veh_goingAheadOther that has the highest VIF Score
+# Remove no_veh_goingAheadOther with the highest VIF Score
 accidents <- accidents %>% 
   dplyr::select(-no_veh_goingAheadOther)
-
-logit1 <- glm(Accident_Severity~., data = accidents, family = "binomial")
-sort(vif(logit1), decreasing = TRUE) %>% as.data.frame()
-
-# Remove Pedestrian_Crossing.Physical_Facilities.0 with the highest VIF Score
-accidents <- accidents %>% 
-  dplyr::select(-Pedestrian_Crossing.Physical_Facilities.0)
 
 logit1 <- glm(Accident_Severity~., data = accidents, family = "binomial")
 sort(vif(logit1), decreasing = TRUE) %>% as.data.frame()
@@ -145,23 +155,9 @@ accidents <- accidents %>%
 logit1 <- glm(Accident_Severity~., data = accidents, family = "binomial")
 sort(vif(logit1), decreasing = TRUE) %>% as.data.frame()
 
-# Remove Junction_Control.4 with the highest VIF Score
-accidents <- accidents %>% 
-  dplyr::select(-Junction_Control.4)
-
-logit1 <- glm(Accident_Severity~., data = accidents, family = "binomial")
-sort(vif(logit1), decreasing = TRUE) %>% as.data.frame()
-
 # Remove Special_Conditions_at_Site.0 with the highest VIF Score
 accidents <- accidents %>% 
   dplyr::select(-Special_Conditions_at_Site.0)
-
-logit1 <- glm(Accident_Severity~., data = accidents, family = "binomial")
-sort(vif(logit1), decreasing = TRUE) %>% as.data.frame()
-
-# Remove Road_Surface_Conditions.1 with the highest VIF Score
-accidents <- accidents %>% 
-  dplyr::select(-Road_Surface_Conditions.1)
 
 logit1 <- glm(Accident_Severity~., data = accidents, family = "binomial")
 sort(vif(logit1), decreasing = TRUE) %>% as.data.frame()
@@ -173,16 +169,9 @@ accidents <- accidents %>%
 logit1 <- glm(Accident_Severity~., data = accidents, family = "binomial")
 sort(vif(logit1), decreasing = TRUE) %>% as.data.frame()
 
-# Remove Carriageway_Hazards.0 with the highest VIF Score
+# Remove Junction_Detail.0 with the highest VIF Score
 accidents <- accidents %>% 
-  dplyr::select(-Carriageway_Hazards.0)
-
-logit1 <- glm(Accident_Severity~., data = accidents, family = "binomial")
-sort(vif(logit1), decreasing = TRUE) %>% as.data.frame()
-
-# Remove Number_of_Casualties with the highest VIF Score
-accidents <- accidents %>% 
-  dplyr::select(-Number_of_Casualties)
+  dplyr::select(-Junction_Detail.0)
 
 logit1 <- glm(Accident_Severity~., data = accidents, family = "binomial")
 sort(vif(logit1), decreasing = TRUE) %>% as.data.frame()
@@ -194,44 +183,9 @@ accidents <- accidents %>%
 logit1 <- glm(Accident_Severity~., data = accidents, family = "binomial")
 sort(vif(logit1), decreasing = TRUE) %>% as.data.frame()
 
-# Remove Junction_Detail.3 with the highest VIF Score
+# Remove Road_Surface_Conditions.1 with the highest VIF Score
 accidents <- accidents %>% 
-  dplyr::select(-Junction_Detail.3)
-
-logit1 <- glm(Accident_Severity~., data = accidents, family = "binomial")
-sort(vif(logit1), decreasing = TRUE) %>% as.data.frame()
-
-# Remove Road_Type.6 with the highest VIF Score
-accidents <- accidents %>% 
-  dplyr::select(-Road_Type.6)
-
-logit1 <- glm(Accident_Severity~., data = accidents, family = "binomial")
-sort(vif(logit1), decreasing = TRUE) %>% as.data.frame()
-
-# Remove no_of_passengers with the highest VIF Score
-accidents <- accidents %>% 
-  dplyr::select(-no_of_passengers)
-
-logit1 <- glm(Accident_Severity~., data = accidents, family = "binomial")
-sort(vif(logit1), decreasing = TRUE) %>% as.data.frame()
-
-# Remove no_of_cyclist with the highest VIF Score
-accidents <- accidents %>% 
-  dplyr::select(-no_of_cyclist)
-
-logit1 <- glm(Accident_Severity~., data = accidents, family = "binomial")
-sort(vif(logit1), decreasing = TRUE) %>% as.data.frame()
-
-# Remove Light_Conditions.1 with the highest VIF Score
-accidents <- accidents %>% 
-  dplyr::select(-Light_Conditions.1)
-
-logit1 <- glm(Accident_Severity~., data = accidents, family = "binomial")
-sort(vif(logit1), decreasing = TRUE) %>% as.data.frame()
-
-# Remove no_motocyle_under_125cc with the highest VIF Score
-accidents <- accidents %>% 
-  dplyr::select(-no_motocyle_under_125cc)
+  dplyr::select(-Road_Surface_Conditions.1)
 
 logit1 <- glm(Accident_Severity~., data = accidents, family = "binomial")
 sort(vif(logit1), decreasing = TRUE) %>% as.data.frame()
@@ -243,96 +197,128 @@ accidents <- accidents %>%
 logit1 <- glm(Accident_Severity~., data = accidents, family = "binomial")
 sort(vif(logit1), decreasing = TRUE) %>% as.data.frame()
 
-# Remove no_motocyle_under_50cc with the highest VIF Score - 13.362891
+# Remove Number_of_Casualties with the highest VIF Score
 accidents <- accidents %>% 
-  dplyr::select(-no_motocyle_under_50cc)
+  dplyr::select(-Number_of_Casualties)
 
 logit1 <- glm(Accident_Severity~., data = accidents, family = "binomial")
 sort(vif(logit1), decreasing = TRUE) %>% as.data.frame()
 
-# Remove no_of_male_drivers with the highest VIF Score - 12.442493
+# Remove Road_Type.6  with the highest VIF Score
 accidents <- accidents %>% 
-  dplyr::select(-no_of_male_drivers)
+  dplyr::select(-Road_Type.6)
 
 logit1 <- glm(Accident_Severity~., data = accidents, family = "binomial")
 sort(vif(logit1), decreasing = TRUE) %>% as.data.frame()
 
-# Remove Speed_limit.30 with the highest VIF Score - 12.207085
+# Remove Junction_Control.4 with the highest VIF Score
 accidents <- accidents %>% 
-  dplyr::select(-Speed_limit.30)
+  dplyr::select(-Junction_Control.4)
 
 logit1 <- glm(Accident_Severity~., data = accidents, family = "binomial")
 sort(vif(logit1), decreasing = TRUE) %>% as.data.frame()
 
-# Remove Weather_Conditions.1 with the highest VIF Score - 10.805584
+# Remove no_of_passengers with the highest VIF Score
 accidents <- accidents %>% 
-  dplyr::select(-Weather_Conditions.1)
+  dplyr::select(-no_of_passengers)
 
 logit1 <- glm(Accident_Severity~., data = accidents, family = "binomial")
 sort(vif(logit1), decreasing = TRUE) %>% as.data.frame()
 
-# Remove no_motocyle_over_500cc with the highest VIF Score - 10.772325
-accidents <- accidents %>% 
-  dplyr::select(-no_motocyle_over_500cc)
-
-logit1 <- glm(Accident_Severity~., data = accidents, family = "binomial")
-sort(vif(logit1), decreasing = TRUE) %>% as.data.frame()
-
-# Remove no_riddenHorse with the highest VIF Score - 10.201557
+# Remove no_riddenHorse with the highest VIF Score
 accidents <- accidents %>% 
   dplyr::select(-no_riddenHorse)
 
 logit1 <- glm(Accident_Severity~., data = accidents, family = "binomial")
 sort(vif(logit1), decreasing = TRUE) %>% as.data.frame()
 
-# Remove no_motocyle_under_500cc with the highest VIF Score - 10.026679
+# Remove no_cycles with the highest VIF Score
 accidents <- accidents %>% 
-  dplyr::select(-no_motocyle_under_500cc)
+  dplyr::select(-no_cycles)
 
 logit1 <- glm(Accident_Severity~., data = accidents, family = "binomial")
 sort(vif(logit1), decreasing = TRUE) %>% as.data.frame()
 
-# Remove no_of_ped_inCarriagewayCrossing with the highest VIF Score - 9.930957
+# Remove Light_Conditions.1 with the highest VIF Score
+accidents <- accidents %>% 
+  dplyr::select(-Light_Conditions.1)
+
+logit1 <- glm(Accident_Severity~., data = accidents, family = "binomial")
+sort(vif(logit1), decreasing = TRUE) %>% as.data.frame()
+
+# Remove no_of_125cc_occupant with the highest VIF Score
+accidents <- accidents %>% 
+  dplyr::select(-no_of_125cc_occupant)
+
+logit1 <- glm(Accident_Severity~., data = accidents, family = "binomial")
+sort(vif(logit1), decreasing = TRUE) %>% as.data.frame()
+
+# Remove X2nd_Road_Class.6 with the highest VIF Score
+accidents <- accidents %>% 
+  dplyr::select(-X2nd_Road_Class.6)
+
+logit1 <- glm(Accident_Severity~., data = accidents, family = "binomial")
+sort(vif(logit1), decreasing = TRUE) %>% as.data.frame()
+
+# Remove no_of_50cc_occupant with the highest VIF Score
+accidents <- accidents %>% 
+  dplyr::select(-no_of_50cc_occupant)
+
+logit1 <- glm(Accident_Severity~., data = accidents, family = "binomial")
+sort(vif(logit1), decreasing = TRUE) %>% as.data.frame()
+
+# Remove no_of_male_drivers with the highest VIF Score
+accidents <- accidents %>% 
+  dplyr::select(-no_of_male_drivers)
+
+logit1 <- glm(Accident_Severity~., data = accidents, family = "binomial")
+sort(vif(logit1), decreasing = TRUE) %>% as.data.frame()
+
+# Remove Speed_limit.30 with the highest VIF Score
+accidents <- accidents %>% 
+  dplyr::select(-Speed_limit.30)
+
+logit1 <- glm(Accident_Severity~., data = accidents, family = "binomial")
+sort(vif(logit1), decreasing = TRUE) %>% as.data.frame()
+
+# Remove no_of_over500cc_occupant with the highest VIF Score 
+accidents <- accidents %>% 
+  dplyr::select(-no_of_over500cc_occupant)
+
+logit1 <- glm(Accident_Severity~., data = accidents, family = "binomial")
+sort(vif(logit1), decreasing = TRUE) %>% as.data.frame()
+
+# Remove no_of_ped_inCarriagewayCrossing with the highest VIF Score
 accidents <- accidents %>% 
   dplyr::select(-no_of_ped_inCarriagewayCrossing)
 
 logit1 <- glm(Accident_Severity~., data = accidents, family = "binomial")
 sort(vif(logit1), decreasing = TRUE) %>% as.data.frame()
 
-# Remove no_eMotorCycle with the highest VIF Score - 9.852625
+# Remove no_of_500cc_occupant with the highest VIF Score
 accidents <- accidents %>% 
-  dplyr::select(-no_eMotorCycle)
+  dplyr::select(-no_of_500cc_occupant)
 
 logit1 <- glm(Accident_Severity~., data = accidents, family = "binomial")
 sort(vif(logit1), decreasing = TRUE) %>% as.data.frame()
 
-# Remove no_of_veh_2000cc with the highest VIF Score - 7.812200
+# Remove no_of_veh_2000cc with the highest VIF Score
 accidents <- accidents %>% 
   dplyr::select(-no_of_veh_2000cc)
 
 logit1 <- glm(Accident_Severity~., data = accidents, family = "binomial")
 sort(vif(logit1), decreasing = TRUE) %>% as.data.frame()
 
-# Remove no_mobilityScooter with the highest VIF Score - 6.496681
-accidents <- accidents %>% 
-  dplyr::select(-no_mobilityScooter)
-
-logit1 <- glm(Accident_Severity~., data = accidents, family = "binomial")
-sort(vif(logit1), decreasing = TRUE) %>% as.data.frame()
-
-# Remove no_veh_leftHandDrive with the highest VIF Score - 5.896817
+# Remove no_veh_leftHandDrive with the highest VIF Score
 accidents <- accidents %>% 
   dplyr::select(-no_veh_leftHandDrive)
 
 logit1 <- glm(Accident_Severity~., data = accidents, family = "binomial")
 sort(vif(logit1), decreasing = TRUE) %>% as.data.frame()
 
-summary(logit1)
-exp(coef(logit1))
+# Remove no_of_scooter_occupant with the highest VIF Score
+accidents <- accidents %>% 
+  dplyr::select(-no_of_scooter_occupant)
 
-predictedProbability <- logit1$fitted.values
-predictedSeverity <- ifelse(predictedProbability<=0.3, "0", "1")
-confusionMatrix(predictedSeverity, accidents$Accident_Severity, positive = "1")
-roc <- roc(accidents$Accident_Severity,predictedProbability)
-roc
-plot(roc)
+logit1 <- glm(Accident_Severity~., data = accidents, family = "binomial")
+sort(vif(logit1), decreasing = TRUE) %>% as.data.frame()
