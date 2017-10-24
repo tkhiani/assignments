@@ -6,7 +6,7 @@ library(caret)
 library(pROC)
 library(car)
 
-companyData <- readxl::read_excel('./largeDataSets/finance-risk-analytics/raw-data.xlsx', 
+companyData <- readxl::read_excel('./largeDataSets/finance-risk-analytics/credit risk/raw-data.xlsx', 
                                   sheet = 'raw data') %>% as.data.frame()
 
 companyData$`Deposits (accepted by commercial banks)` <- NULL

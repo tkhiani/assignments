@@ -244,3 +244,4 @@ plot(rocForTest)
 
 predictedSeverityForTest <- ifelse(predictedProbabilityForTest < 0.45, "0", "1")
 confusionMatrix(predictedSeverityForTest, test$Accident_Severity, positive = "1")
+

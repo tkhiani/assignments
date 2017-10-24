@@ -12,6 +12,7 @@ library(pscl)
 library(car)
 library(caret)
 library(pROC)
+library(e1071)
 
 options(max.print=2000)
 
@@ -45,9 +46,6 @@ colnames(accidents)
 for(i in c(4:19)) {
   accidents[,i] <- as.factor(accidents[,i]) 
 }
-
-accidents <- accidents %>%
-  dplyr::mutate(Accident_Severity = if_else(Accident_Severity %in% c(2,3), 0, 1))
 
 Accident_Severity <- accidents$Accident_Severity
 accidents <- dummy.data.frame(accidents[-1], sep = ".")
@@ -86,7 +84,7 @@ accidents <- accidents %>%
 # Split the data into test and train
 # Oversample the number of serious accidents in the training sample
 set.seed(9090)
-split <- sample.split(accidents$Accident_Severity, SplitRatio = 0.70)
+split <- sample.split(accidents$Accident_Severity, SplitRatio = 0.10)
 train <- subset(accidents, split == TRUE)
 
 fatalAccidentsInTrain <- dplyr::filter(train, Accident_Severity == "1")
@@ -97,7 +95,10 @@ train <- rbind(train, fatalAccidentsInTrain)
 test <- subset(accidents, split == FALSE)
 
 # Free up memory
-rm(accidents, fatalAccidentsInTrain, split, i)
+rm(accidents, fatalAccidentsInTrain, split, i, Accident_Severity)
+
+svm_model <- svm(Accident_Severity~., data = train, scale = FALSE, probability = TRUE)
+svm_predict <- predict(svm_model, train, probability = TRUE, decision.values = TRUE)
 
 # Remove variables that have a linear relationship as indicated by alias & their coeffecitents are also NA
 train <- train %>% 
