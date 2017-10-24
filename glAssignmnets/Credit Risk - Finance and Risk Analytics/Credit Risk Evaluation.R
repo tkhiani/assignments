@@ -126,7 +126,11 @@ for(i in colnames(companyDataWithLevergeVariables[,-1])) {
   # Size - `Reserves and funds`
   # Liquidity - `Quick ratio (times)`
   # Leverage - `Total term liabilities / tangible net worth`
-  
+# credit equation = -1.9429490 
+#                   - 0.0997095 * `PBDITA as % of total income` 
+#                   - 0.0023890 * `Reserves and funds` 
+#                   - 0.8465098 * `Quick ratio (times)` 
+#                   + `Total term liabilities / tangible net worth`
 creditEquation <- glm(formula = default~`PBDITA as % of total income`+
                         `Reserves and funds`+
                         `Quick ratio (times)`+
