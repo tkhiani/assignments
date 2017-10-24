@@ -130,7 +130,7 @@ for(i in colnames(companyDataWithLevergeVariables[,-1])) {
 #                   - 0.0997095 * `PBDITA as % of total income` 
 #                   - 0.0023890 * `Reserves and funds` 
 #                   - 0.8465098 * `Quick ratio (times)` 
-#                   + `Total term liabilities / tangible net worth`
+#                   + 0.6847675 * `Total term liabilities / tangible net worth`
 creditEquation <- glm(formula = default~`PBDITA as % of total income`+
                         `Reserves and funds`+
                         `Quick ratio (times)`+
@@ -243,7 +243,7 @@ validationSample %>%
     n = n(),
     default = sum(default),
     defaultRate = default * 100 / n,
-    perOfDefaulterIdentified = default * 100 / testNoOfDefaulters) %>%
+    perOfDefaulterIdentified = default * 100 / validationSampleNoOfDefaulters) %>%
   dplyr::arrange(desc(decile)) %>%
-  dplyr::mutate(cumulativeDefaultRate = cumsum(default)*100/testNoOfDefaulters) %>%
+  dplyr::mutate(cumulativeDefaultRate = cumsum(default)*100/validationSampleNoOfDefaulters) %>%
   data.frame()
