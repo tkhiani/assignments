@@ -227,6 +227,40 @@ predictedProbabilityForTrain %>% data.frame() %>% ggplot() +
 predictedSeverityForTrain <- ifelse(predictedProbabilityForTrain < 0.2, "0", "1")
 confusionMatrix(predictedSeverityForTrain, train$Accident_Severity, positive = "1")
 
+totalNoOfFatalAccidents = sum(train$Accident_Severity == 1)
+totalNoOfNonFatalAccidents = sum(train$Accident_Severity == 0)
+fatalRate = totalNoOfFatalAccidents * 100 / nrow(train)
+
+trainWithDecile <- train %>%
+  dplyr::arrange(desc(predictedProbabilities)) %>%
+  dplyr::mutate(decile = ntile(predictedProbabilities, 10)) %>% 
+  dplyr::group_by(decile) %>%
+  dplyr::summarise(
+    n = n(),
+    noOfFatalAccidents =  sum(Accident_Severity == 1),
+    noOfNonFatalAccidents = sum(Accident_Severity == 0)
+  ) %>%
+  dplyr::arrange(desc(decile)) %>%
+  dplyr::mutate(
+    fatalAccidentRate =  noOfFatalAccidents * 100 / n,
+    nonFatalAccidentRate = noOfNonFatalAccidents * 100 / n,
+    baseRate = fatalRate,
+    lift = fatalAccidentRate / baseRate,
+    cumulativeFatalAccidentRate = cumsum(noOfFatalAccidents) * 100 / totalNoOfFatalAccidents,
+    cumulateNonFatalAccidentRate = cumsum(noOfNonFatalAccidents) * 100 / totalNoOfNonFatalAccidents
+  ) %>%
+  data.frame()
+trainWithDecile    
+
+trainWithDecile %>% 
+  ggplot(aes(x = desc(decile), y = lift)) +
+  geom_line(colour="steelblue") + geom_point(colour="goldenrod")
+
+trainWithDecile %>% 
+  ggplot(aes(x = desc(decile), y = fatalAccidentRate)) +
+  geom_line(colour="steelblue") + geom_point(colour="goldenrod") +
+  geom_hline(yintercept = trainWithDecile$baseRate, colour="rosybrown")
+
 # Cross Validation 
 trainingFolds <- createFolds(train$Accident_Severity, k = 10, returnTrain = TRUE)
 rocForFolds <- lapply(trainingFolds, function(x) {
@@ -262,3 +296,36 @@ rocForTest <- roc(test$Accident_Severity, predictedProbabilityForTest)
 rocForTest
 plot(rocForTest)
 
+totalNoOfFatalAccidents = sum(test$Accident_Severity == 1)
+totalNoOfNonFatalAccidents = sum(test$Accident_Severity == 0)
+fatalRate = totalNoOfFatalAccidents * 100 / nrow(test)
+
+testWithDecile <- test %>%
+  dplyr::arrange(desc(predictedProbabilities)) %>%
+  dplyr::mutate(decile = ntile(predictedProbabilities, 10)) %>% 
+  dplyr::group_by(decile) %>%
+  dplyr::summarise(
+    n = n(),
+    noOfFatalAccidents =  sum(Accident_Severity == 1),
+    noOfNonFatalAccidents = sum(Accident_Severity == 0)
+  ) %>%
+  dplyr::arrange(desc(decile)) %>%
+  dplyr::mutate(
+    fatalAccidentRate =  noOfFatalAccidents * 100 / n,
+    nonFatalAccidentRate = noOfNonFatalAccidents * 100 / n,
+    baseRate = fatalRate,
+    lift = fatalAccidentRate / baseRate,
+    cumulativeFatalAccidentRate = cumsum(noOfFatalAccidents) * 100 / totalNoOfFatalAccidents,
+    cumulateNonFatalAccidentRate = cumsum(noOfNonFatalAccidents) * 100 / totalNoOfNonFatalAccidents
+  ) %>%
+  data.frame()
+testWithDecile
+
+testWithDecile %>% 
+  ggplot(aes(x = desc(decile), y = lift)) +
+  geom_line(colour="steelblue") + geom_point(colour="goldenrod")
+
+testWithDecile %>% 
+  ggplot(aes(x = desc(decile), y = fatalAccidentRate)) +
+  geom_line(colour="steelblue") + geom_point(colour="goldenrod") +
+  geom_hline(yintercept = testWithDecile$baseRate, colour="rosybrown")
