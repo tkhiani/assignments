@@ -88,7 +88,6 @@ train <- subset(accidents, split == TRUE)
 seriousAccidentsInTrain <- dplyr::filter(train, Accident_Severity == "1")
 train <- rbind(train, seriousAccidentsInTrain)
 train <- rbind(train, seriousAccidentsInTrain)
-train <- rbind(train, seriousAccidentsInTrain)
 
 test <- subset(accidents, split == FALSE)
 
@@ -201,14 +200,49 @@ oddsRatio
 
 # Evaluate model performance on training sample
 predictedProbabilityForTrain <- logit1$fitted.values
+train$predictedProbabilities <- predictedProbabilityForTrain
 rocForTrain<- roc(train$Accident_Severity,predictedProbabilityForTrain)
 rocForTrain
 plot(rocForTrain)
 
 predictedProbabilityForTrain %>% data.frame() %>% ggplot() + 
   geom_histogram(aes(., fill = "Red"))
-predictedSeverityForTrain <- ifelse(predictedProbabilityForTrain < 0.45, "0", "1")
+predictedSeverityForTrain <- ifelse(predictedProbabilityForTrain < 0.40, "0", "1")
 confusionMatrix(predictedSeverityForTrain, train$Accident_Severity, positive = "1")
+
+totalNoOfSeriousAccidents = sum(train$Accident_Severity == 1)
+totalNoOfNonSeriousAccidents = sum(train$Accident_Severity == 0)
+seriousRate = totalNoOfSeriousAccidents * 100 / nrow(train)
+
+trainWithDecile <- train %>%
+  dplyr::arrange(desc(predictedProbabilities)) %>%
+  dplyr::mutate(decile = ntile(predictedProbabilities, 10)) %>% 
+  dplyr::group_by(decile) %>%
+  dplyr::summarise(
+    n = n(),
+    noOfSeriousAccidents =  sum(Accident_Severity == 1),
+    noOfNonSeriousAccidents = sum(Accident_Severity == 0)
+  ) %>%
+  dplyr::arrange(desc(decile)) %>%
+  dplyr::mutate(
+    seriousAccidentRate =  noOfSeriousAccidents * 100 / n,
+    nonSeriousAccidentRate = noOfNonSeriousAccidents * 100 / n,
+    baseRate = seriousRate,
+    lift = seriousAccidentRate / baseRate,
+    cumulativeSeriousAccidentRate = cumsum(noOfSeriousAccidents) * 100 / totalNoOfSeriousAccidents,
+    cumulateNonSeriousAccidentRate = cumsum(noOfNonSeriousAccidents) * 100 / totalNoOfNonSeriousAccidents
+  ) %>%
+  data.frame()
+trainWithDecile    
+
+trainWithDecile %>% 
+  ggplot(aes(x = desc(decile), y = lift)) +
+  geom_line(colour="steelblue") + geom_point(colour="goldenrod")
+
+trainWithDecile %>% 
+  ggplot(aes(x = desc(decile), y = seriousAccidentRate)) +
+  geom_line(colour="steelblue") + geom_point(colour="goldenrod") +
+  geom_hline(yintercept = trainWithDecile$baseRate, colour="rosybrown")
 
 # Cross Validation 
 trainingFolds <- createFolds(train$Accident_Severity, k = 10, returnTrain = TRUE)
@@ -238,10 +272,44 @@ plot(rocForFoldsAsDataFrame[,1], type = 'b')
 
 # Evaluate performance on the test sample
 predictedProbabilityForTest <- predict(logit1, newdata = test, type = "response")
+test$predictedProbabilities <- predictedProbabilityForTest
 rocForTest <- roc(test$Accident_Severity, predictedProbabilityForTest)
 rocForTest
 plot(rocForTest)
 
-predictedSeverityForTest <- ifelse(predictedProbabilityForTest < 0.45, "0", "1")
+predictedSeverityForTest <- ifelse(predictedProbabilityForTest < 0.40, "0", "1")
 confusionMatrix(predictedSeverityForTest, test$Accident_Severity, positive = "1")
 
+totalNoOfSeriousAccidents = sum(test$Accident_Severity == 1)
+totalNoOfNonSeriousAccidents = sum(test$Accident_Severity == 0)
+seriousRate = totalNoOfSeriousAccidents * 100 / nrow(test)
+
+testWithDecile <- test %>%
+  dplyr::arrange(desc(predictedProbabilities)) %>%
+  dplyr::mutate(decile = ntile(predictedProbabilities, 10)) %>% 
+  dplyr::group_by(decile) %>%
+  dplyr::summarise(
+    n = n(),
+    noOfSeriousAccidents =  sum(Accident_Severity == 1),
+    noOfNonSeriousAccidents = sum(Accident_Severity == 0)
+  ) %>%
+  dplyr::arrange(desc(decile)) %>%
+  dplyr::mutate(
+    seriousAccidentRate =  noOfSeriousAccidents * 100 / n,
+    nonSeriousAccidentRate = noOfNonSeriousAccidents * 100 / n,
+    baseRate = seriousRate,
+    lift = seriousAccidentRate / baseRate,
+    cumulativeSeriousAccidentRate = cumsum(noOfSeriousAccidents) * 100 / totalNoOfSeriousAccidents,
+    cumulateNonSeriousAccidentRate = cumsum(noOfNonSeriousAccidents) * 100 / totalNoOfNonSeriousAccidents
+  ) %>%
+  data.frame()
+testWithDecile    
+
+testWithDecile %>% 
+  ggplot(aes(x = desc(decile), y = lift)) +
+  geom_line(colour="steelblue") + geom_point(colour="goldenrod")
+
+testWithDecile %>% 
+  ggplot(aes(x = desc(decile), y = seriousAccidentRate)) +
+  geom_line(colour="steelblue") + geom_point(colour="goldenrod") +
+  geom_hline(yintercept = testWithDecile$baseRate, colour="rosybrown")
